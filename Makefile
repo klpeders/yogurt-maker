@@ -2,78 +2,48 @@
 ## Slightly corrected version of auto generated makefile by CodeLite IDE
 ##
 ## Build variables
-ProjectName            :=yogurtmaker
-SourceDirectory        :=.
-BuildDirectory         :=./Build
-ObjectSuffix           :=.rel
-IncludeSwitch          :=-I
-LibrarySwitch          :=-l stm8
-OutputSwitch           :=-o 
-LibraryPathSwitch      :=-L
-SourceSwitch           :=-c 
-LinkerName             :=/usr/bin/sdcc
-LinkOptions            := --out-fmt-ihx -mstm8
-OutputFile             :=$(BuildDirectory)/$(ProjectName).ihx
-ObjectSwitch           :=-o 
-MakeDirCommand         :=mkdir -p
-IncludePath            := $(IncludeSwitch). $(IncludeSwitch)./include 
+ProjectName            := yogurtmaker
+Device                 := stm8
+
+TARGET                 := $(ProjectName).ihx
+SourceDirectory        := .
+BUILD                  := ./Build
 
 ##
 ## Common variables
 ## CC and CFLAGS can be overriden using an environment variables
 ##
-CC       := /usr/bin/sdcc
-CFLAGS   := $(LibrarySwitch) -mstm8
-
+CC           := sdcc-sdcc
+LD           := sdcc-sdcc
+MKDIR        := mkdir -p
+INCLUDE      := -I. -I./include
+CFLAGS       := -l$(Device) -m$(Device) $(INCLUDE)
+LDFLAGS      := --out-fmt-ihx -m$(Device)
+ObjectSuffix := .rel
 
 ##
 ## User defined environment variables
 ##
-Objects=$(BuildDirectory)/ym.c$(ObjectSuffix) $(BuildDirectory)/display.c$(ObjectSuffix) $(BuildDirectory)/timer.c$(ObjectSuffix) $(BuildDirectory)/buttons.c$(ObjectSuffix) $(BuildDirectory)/adc.c$(ObjectSuffix) $(BuildDirectory)/menu.c$(ObjectSuffix) $(BuildDirectory)/params.c$(ObjectSuffix) $(BuildDirectory)/relay.c$(ObjectSuffix) 
+Source := ym.c display.c timer.c buttons.c adc.c menu.c params.c relay.c
+Objects := $(Source:%=$(BuildDirectory)/%$(ObjectSuffix))
+
 
 ##
-## Main Build Targets 
+## Main Build Targets
 ##
-.PHONY: all clean MakeBuildDirectory
-all: $(OutputFile)
+.PHONY: all clean
+all: $(BUILD)/$(TARGET)
 
-$(OutputFile): $(BuildDirectory)/.d $(Objects) 
-	@$(MakeDirCommand) $(@D)
-	@echo "" > $(BuildDirectory)/.d
-	$(LinkerName) $(OutputSwitch)$(OutputFile) $(Objects) $(LinkOptions)
+$(BUILD)/$(TARGET): $(Objects)
+	@$(MKDIR) $(@D)
+	$(LD) $(LDFLAGS) -o$(OutputFile) $(Objects)
 
-MakeBuildDirectory:
-	@test -d $(BuildDirectory) || $(MakeDirCommand) $(BuildDirectory)
-
-$(BuildDirectory)/.d:
-	@test -d $(BuildDirectory) || $(MakeDirCommand) $(BuildDirectory)
 
 ##
 ## Objects
 ##
-$(BuildDirectory)/ts.c$(ObjectSuffix): ts.c
-	$(CC) $(SourceSwitch) "$(SourceDirectory)/ts.c" $(CFLAGS) $(ObjectSwitch)$(BuildDirectory)/ts.c$(ObjectSuffix) $(IncludePath)
-
-$(BuildDirectory)/display.c$(ObjectSuffix): display.c
-	$(CC) $(SourceSwitch) "$(SourceDirectory)/display.c" $(CFLAGS) $(ObjectSwitch)$(BuildDirectory)/display.c$(ObjectSuffix) $(IncludePath)
-
-$(BuildDirectory)/timer.c$(ObjectSuffix): timer.c
-	$(CC) $(SourceSwitch) "$(SourceDirectory)/timer.c" $(CFLAGS) $(ObjectSwitch)$(BuildDirectory)/timer.c$(ObjectSuffix) $(IncludePath)
-
-$(BuildDirectory)/buttons.c$(ObjectSuffix): buttons.c
-	$(CC) $(SourceSwitch) "$(SourceDirectory)/buttons.c" $(CFLAGS) $(ObjectSwitch)$(BuildDirectory)/buttons.c$(ObjectSuffix) $(IncludePath)
-
-$(BuildDirectory)/adc.c$(ObjectSuffix): adc.c
-	$(CC) $(SourceSwitch) "$(SourceDirectory)/adc.c" $(CFLAGS) $(ObjectSwitch)$(BuildDirectory)/adc.c$(ObjectSuffix) $(IncludePath)
-
-$(BuildDirectory)/menu.c$(ObjectSuffix): menu.c
-	$(CC) $(SourceSwitch) "$(SourceDirectory)/menu.c" $(CFLAGS) $(ObjectSwitch)$(BuildDirectory)/menu.c$(ObjectSuffix) $(IncludePath)
-
-$(BuildDirectory)/params.c$(ObjectSuffix): params.c
-	$(CC) $(SourceSwitch) "$(SourceDirectory)/params.c" $(CFLAGS) $(ObjectSwitch)$(BuildDirectory)/params.c$(ObjectSuffix) $(IncludePath)
-
-$(BuildDirectory)/relay.c$(ObjectSuffix): relay.c
-	$(CC) $(SourceSwitch) "$(SourceDirectory)/relay.c" $(CFLAGS) $(ObjectSwitch)$(BuildDirectory)/relay.c$(ObjectSuffix) $(IncludePath)
+$(BuildDirectory)/%.c$(ObjectSuffix): $(SourceDirectory)/%.c
+	$(CC) $(CFLAGS) -c $< -o$@
 
 
 ##
