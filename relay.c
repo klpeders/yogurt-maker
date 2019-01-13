@@ -28,12 +28,16 @@
 #define RELAY_PORT              PA_ODR
 #define RELAY_BIT               0x08
 #define RELAY_TIMER_MULTIPLIER  7
+
+#ifdef CONFIG_USE_RELAY_BUZZ
 #define RELAY_BUZZ_OFF_PULSES   6000
 #define RELAY_PRE_BUZZ_PULSES   10
 #define RELAY_BUZZ_ON_PULSES    60
 
-static unsigned int timer;
 static unsigned int pulses;
+#endif
+
+static unsigned int timer;
 static bool state;
 static bool relayEnable;
 
@@ -77,6 +81,7 @@ static void switchRelay ()
  */
 void buzzRelay ()
 {
+#ifdef CONFIG_USE_RELAY_BUZZ
     if (!isRelayEnabled() ) {
         pulses++;
 
@@ -96,6 +101,7 @@ void buzzRelay ()
             setRelay (false);
         }
     }
+#endif
 }
 
 /**
