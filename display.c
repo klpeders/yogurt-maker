@@ -19,6 +19,8 @@
  * Control functions for the seven-segment display (SSD).
  */
 
+#include <stdint.h>
+
 #include "display.h"
 #include "stm8s003/gpio.h"
 
@@ -65,19 +67,82 @@
 // PD.4
 #define SSD_DIGIT_3_BIT     0x10
 
-const unsigned char Hex2CharMap[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A',
-                                     'B', 'C', 'D', 'E', 'F'
-                                    };
 
-static unsigned char activeDigitId;
-static unsigned char displayAC[3];
-static unsigned char displayD[3];
 
-static void enableDigit (unsigned char);
-static void setDigit (unsigned char, unsigned char, bool);
+#define bit(n) (1 << (n))
+
+
+// Global variables
+
+static uint8_t activeSegId;
+static uint8_t display[8];
+
+static void setDigit (uint8_t, uint8_t, bool);
 
 static bool displayOff;
 static bool testMode;
+
+/**
+ * @brief FontROM. The last element of the table must be '0'.
+ * The list of segments as they located on display:
+ *  _3_       _2_       _1_
+ *  <A>       <A>       <A>
+ * F   B     F   B     F   B
+ *  <G>       <G>       <G>
+ * E   C     E   C     E   C
+ *  <D> (P)   <D> (P)   <D> (P)
+ *
+ */
+static const uint8_t font[] = {
+    ' ', 0,
+    '-', bit(SEG_G),
+    '0', bit(SEG_B) | bit(SEG_F) | bit(SEG_C) | bit(SEG_A) | bit(SEG_D) | bit(SEG_E),
+    '1', bit(SEG_B) | bit(SEG_C),
+    '2', bit(SEG_B) | bit(SEG_G) | bit(SEG_A) | bit(SEG_D) | bit(SEG_E),
+    '3', bit(SEG_B) | bit(SEG_C) | bit(SEG_G) | bit(SEG_A) | bit(SEG_D),
+    '4', bit(SEG_B) | bit(SEG_C) | bit(SEG_F) | bit(SEG_G),
+    '5', bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_D),
+    '6', bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_D) | bit(SEG_E),
+    '7', bit(SEG_B) | bit(SEG_C) | bit(SEG_A),
+    '8', bit(SEG_B) | bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_D) | bit(SEG_E),
+    '9', bit(SEG_B) | bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_D),
+    'A', bit(SEG_B) | bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_E),
+    'B', bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_D) | bit(SEG_E),
+    'C', bit(SEG_F) | bit(SEG_A) | bit(SEG_D) | bit(SEG_E),
+    'D', bit(SEG_B) | bit(SEG_C) | bit(SEG_G) | bit(SEG_D) | bit(SEG_E),
+    'E', bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_D) | bit(SEG_E),
+    'F', bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_E),
+    'H', bit(SEG_B) | bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_E),
+    'L', bit(SEG_F) | bit(SEG_D) | bit(SEG_E),
+    'N', bit(SEG_C) | bit(SEG_G) | bit(SEG_E),
+    'O', bit(SEG_B) | bit(SEG_F) | bit(SEG_C) | bit(SEG_A) | bit(SEG_D) | bit(SEG_E),
+    'P', bit(SEG_B) | bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_E),
+    'R', bit(SEG_G) | bit(SEG_E),
+    'T', bit(SEG_F) | bit(SEG_G) | bit(SEG_D) | bit(SEG_E),
+    0,   0
+};
+
+static const uint8_t displaySegment[] = {
+    // Port A: id 0, 1
+    SSD_SEG_B_BIT, SSD_SEG_F_BIT,
+    // Port C: id 2, 3
+    SSD_SEG_C_BIT, SSD_SEG_G_BIT,
+    // Port D: id 3, 4, ...
+    SSD_SEG_A_BIT, SSD_SEG_D_BIT, SSD_SEG_E_BIT, SSD_SEG_P_BIT
+};
+
+enum {
+    SEG_B, SEG_F,
+    SEG_C, SEG_G,
+    SEG_A, SEG_D, SEG_E, SEG_P
+};
+
+enum {
+    DIGIT_1 = 0x10,
+    DIGIT_2 = 0x20,
+    DIGIT_3 = 0x01 // Placeholder for 0x10, replaced in refresh
+};
+
 
 /**
  * @brief Configure appropriate bits for GPIO ports, initialize static
@@ -94,8 +159,36 @@ void initDisplay()
     PD_DDR |= SSD_SEG_A_BIT | SSD_SEG_D_BIT | SSD_SEG_E_BIT | SSD_SEG_P_BIT | SSD_DIGIT_3_BIT;
     PD_CR1 |= SSD_SEG_A_BIT | SSD_SEG_D_BIT | SSD_SEG_E_BIT | SSD_SEG_P_BIT | SSD_DIGIT_3_BIT;
     displayOff = false;
-    activeDigitId = 0;
+    activeSegId = 0;
     setDisplayTestMode (true, "");
+}
+
+/**
+ * @brief
+ * Enable the segment with given ID on SSD and remaining of segments are unchanged.
+ *
+ * @param id
+ * The ID = 0 corresponds to the SEG_A to SEG_P enum
+ * Accepted values are: SEG_A to SEG_P
+ * @param set
+ * Enable the segment if true, else disable
+ */
+static void enableSegment (uint8_t id, bool set)
+{
+    uint8_t seg = displaySegment[id];
+    volatile uint8_t *rdport;
+
+    if (id <= SEG_F)
+        rdport = &SSD_SEG_BF_PORT;
+    else if (id <= SEG_G)
+        rdport = &SSD_SEG_CG_PORT;
+    else
+        rdport = &SSD_SEG_AEDP_PORT;
+
+    if (set)
+        *rdport |= seg;
+    else
+        *rdport &= ~seg;
 }
 
 /**
@@ -106,25 +199,27 @@ void initDisplay()
  */
 void refreshDisplay()
 {
-    enableDigit (3);
+    uint8_t rdport, digits;
+
+    enableSegment (activeSegId, false);
 
     if (displayOff) {
         return;
     }
 
-    SSD_SEG_BF_PORT &= ~SSD_BF_PORT_MASK;
-    SSD_SEG_BF_PORT |= displayAC[activeDigitId] & SSD_BF_PORT_MASK;
-    SSD_SEG_CG_PORT &= ~SSD_CG_PORT_MASK;
-    SSD_SEG_CG_PORT |= displayAC[activeDigitId] & SSD_CG_PORT_MASK;
-    SSD_SEG_AEDP_PORT &= ~SSD_AEDP_PORT_MASK;
-    SSD_SEG_AEDP_PORT |= displayD[activeDigitId];
-    enableDigit (activeDigitId);
+    activeSegId = (activeSegId + 1) & 0x7;
 
-    if (activeDigitId > 1) {
-        activeDigitId = 0;
-    } else {
-        activeDigitId++;
-    }
+    digits = display[activeSegId];
+
+    rdport = SSD_DIGIT_12_PORT & ~(SSD_DIGIT_1_BIT | SSD_DIGIT_2_BIT);
+    SSD_DIGIT_12_PORT = rdport | (digits & (SSD_DIGIT_1_BIT | SSD_DIGIT_2_BIT));
+
+    rdport = SSD_DIGIT_3_PORT & ~SSD_DIGIT_3_BIT;
+    if (digits & DIGIT_3)
+        rdport |= SSD_DIGIT_3_BIT;
+    SSD_DIGIT_3_PORT = rdport;
+
+    enableSegment (activeSegId, true);
 }
 
 /**
@@ -155,23 +250,6 @@ void setDisplayTestMode (bool val, char* str)
 void setDisplayOff (bool val)
 {
     displayOff = val;
-}
-
-/**
- * @brief Sets dot in the buffer of display at position pointed by id
- *  to the state defined by val.
- * @param id
- *  identifier of digit 0..2
- * @param val
- *  state of dot to be set: true - enable, false - disable.
- */
-void setDisplayDot (unsigned char id, bool val)
-{
-    if (val) {
-        displayD[id] |= SSD_SEG_P_BIT;
-    } else {
-        displayD[id] &= ~SSD_SEG_P_BIT;
-    }
 }
 
 /**
@@ -210,53 +288,26 @@ void setDisplayStr (const unsigned char* val)
     }
 }
 
+
 /**
- * @brief
- * Enable the digit with given ID on SSD and rest of digits are disabled.
- *
- * @param id
- * The ID = 0 corresponds to the right most digit on the display.
- * Accepted values are: 0, 1, 2, any other value will disable display.
+ * @brief Sets bits within display's buffer appropriate to given value.
  */
-static void enableDigit (unsigned char id)
+static void paintChar(uint8_t mask, uint8_t id)
 {
-    switch (id) {
-    case 0:
-        SSD_DIGIT_12_PORT &= ~SSD_DIGIT_1_BIT;
-        SSD_DIGIT_12_PORT |= SSD_DIGIT_2_BIT;
-        SSD_DIGIT_3_PORT |= SSD_DIGIT_3_BIT;
-        break;
+    int8_t i;
 
-    case 1:
-        SSD_DIGIT_12_PORT &= ~SSD_DIGIT_2_BIT;
-        SSD_DIGIT_12_PORT |= SSD_DIGIT_1_BIT;
-        SSD_DIGIT_3_PORT |= SSD_DIGIT_3_BIT;
-        break;
-
-    case 2:
-        SSD_DIGIT_3_PORT &= ~SSD_DIGIT_3_BIT;
-        SSD_DIGIT_12_PORT |= SSD_DIGIT_1_BIT | SSD_DIGIT_2_BIT;
-        break;
-
-    default:
-        SSD_DIGIT_12_PORT |= SSD_DIGIT_1_BIT | SSD_DIGIT_2_BIT;
-        SSD_DIGIT_3_PORT |= SSD_DIGIT_3_BIT;
-        break;
-    }
+    for (i = 0; i < 8; i++, mask >>= 1)
+        if (mask & 1)
+            display[i] &= ~id;
+        else
+            display[i] |= id;
 }
+
 
 /**
  * @brief Sets bits within display's buffer appropriate to given value.
  *  So this symbol will be shown on display during refreshDisplay() call.
  *  When test mode is enabled the display's buffer will not be updated.
- *
- * The list of segments as they located on display:
- *  _2_       _1_       _0_
- *  <A>       <A>       <A>
- * F   B     F   B     F   B
- *  <G>       <G>       <G>
- * E   C     E   C     E   C
- *  <D> (P)   <D> (P)   <D> (P)
  *
  * @param id
  *  Identifier of character's position on display.
@@ -273,149 +324,22 @@ static void enableDigit (unsigned char id)
  *  Accepted values true/false.
  *
  */
-static void setDigit (unsigned char id, unsigned char val, bool dot)
+static void setDigit (uint8_t id, uint8_t val, bool dot)
 {
+    static const uint8_t digitVec[] = {DIGIT_1, DIGIT_2, DIGIT_3};
+    uint8_t mask;
+    const uint8_t *p;
 
     if (id > 2) return;
 
     if (testMode) return;
 
-    switch (val) {
-    case '-':
-        displayAC[id] = SSD_SEG_G_BIT;
-        displayD[id] = 0;
-        break;
+    for (p = font; p[0]; p += 2)
+        if (p[0] == val) break;
+    mask = p[1];
 
-    case ' ':
-        displayAC[id] = 0;
-        displayD[id] = 0;
-        break;
+    if (dot)
+        mask |= bit(SEG_P);
 
-    case '0':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_F_BIT | SSD_SEG_C_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case '1':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_C_BIT;
-        displayD[id] = 0;
-        break;
-
-    case '2':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case '3':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_C_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT;
-        break;
-
-    case '4':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_C_BIT | SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = 0;
-        break;
-
-    case '5':
-        displayAC[id] = SSD_SEG_C_BIT | SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT;
-        break;
-
-    case '6':
-        displayAC[id] = SSD_SEG_C_BIT | SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case '7':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_C_BIT;
-        displayD[id] = SSD_SEG_A_BIT;
-        break;
-
-    case '8':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_C_BIT | SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case '9':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_C_BIT | SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT;
-        break;
-
-    case 'A':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_C_BIT | SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'B':
-        displayAC[id] = SSD_SEG_C_BIT | SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'C':
-        displayAC[id] = SSD_SEG_F_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'D':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_C_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'E':
-        displayAC[id] = SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'F':
-        displayAC[id] = SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'H':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_C_BIT | SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_E_BIT;
-        break;
-
-    case 'L':
-        displayAC[id] = SSD_SEG_F_BIT;
-        displayD[id] = SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'N':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_F_BIT | SSD_SEG_C_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'O':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_F_BIT | SSD_SEG_C_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'P':
-        displayAC[id] = SSD_SEG_B_BIT | SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'R':
-        displayAC[id] = SSD_SEG_F_BIT;
-        displayD[id] = SSD_SEG_A_BIT | SSD_SEG_E_BIT;
-        break;
-
-    case 'T':
-        displayAC[id] = SSD_SEG_F_BIT | SSD_SEG_G_BIT;
-        displayD[id] = SSD_SEG_D_BIT | SSD_SEG_E_BIT;
-        break;
-
-    default:
-        displayAC[id] = 0;
-        displayD[id] = SSD_SEG_D_BIT;
-    }
-
-    if (dot) {
-        displayD[id] |= SSD_SEG_P_BIT;
-    } else {
-        displayD[id] &= ~SSD_SEG_P_BIT;
-    }
-
-    return;
+    paintChar(mask, digitVec[id]);
 }
