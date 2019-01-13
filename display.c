@@ -257,13 +257,19 @@ void setDisplayOff (bool val)
  * @param val
  *  pointer to the null-terminated string.
  */
-void setDisplayStr (const unsigned char* val)
+void setDisplayStr (const uint8_t *val)
 {
-    unsigned char i, d;
+#ifdef RIGHT_ALIGN_TEXT
+    uint8_t i, d;
+
+    // disable the digit if it is not needed.
+    for (i = 0; i < 3; i++) {
+        setDigit (i, ' ', false);
+    }
 
     // get number of display digit(s) required to show given string.
-    for (i = 0, d = 0; * (val + i) != 0; i++, d++) {
-        if (* (val + i) == '.' && i > 0 && * (val + i - 1) != '.') d--;
+    for (i = 0, d = 0; val[i]; i++, d++) {
+        if (val[i] == '.' && i > 0 && val[i-1] != '.') d--;
     }
 
     // at this point d = required digits
@@ -272,20 +278,36 @@ void setDisplayStr (const unsigned char* val)
         d = 3;
     }
 
-    // disable the digit if it is not needed.
-    for (i = 3 - d; i > 0; i--) {
-        setDigit (3 - i, ' ', false);
-    }
-
     // set values for digits.
-    for (i = 0; d != 0 && *val + i != 0; i++, d--) {
-        if (* (val + i + 1) == '.') {
-            setDigit (d - 1, * (val + i), true);
+    for (i = 0; d != 0 && val[i]; i++, d--) {
+        uint8_t c = val[i];
+        bool dot = false;
+
+        if (val[i+1] == '.') {
+            dot = true;
             i++;
-        } else {
-            setDigit (d - 1, * (val + i), false);
         }
+        setDigit (d - 1, c, dot);
     }
+#else
+    uint8_t i;
+
+    for (i = 0; i < 3; i++) {
+        char c = val[0];
+        bool d = false;
+
+        if (c == '\0')
+            c = ' ';
+        else {
+            if (val[1] == '.') {
+                d = true;
+                val++;
+            }
+            val++;
+         }
+        setDigit (i, c, d);
+    }
+#endif
 }
 
 
@@ -326,7 +348,11 @@ static void paintChar(uint8_t mask, uint8_t id)
  */
 static void setDigit (uint8_t id, uint8_t val, bool dot)
 {
+#ifdef RIGHT_ALIGN
     static const uint8_t digitVec[] = {DIGIT_1, DIGIT_2, DIGIT_3};
+#else
+    static const uint8_t digitVec[] = {DIGIT_3, DIGIT_2, DIGIT_1};
+#endif
     uint8_t mask;
     const uint8_t *p;
 
