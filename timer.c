@@ -79,6 +79,7 @@ void initTimer()
 void startFTimer()
 {
     fTimer = ( (getParamById (PARAM_FERMENTATION_TIME) - 1) << BITS_FOR_MINUTES) + 59;
+    fTimerSeconds = getUptimeSeconds();
 }
 
 /**
