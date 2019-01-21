@@ -48,9 +48,36 @@
 static uint8_t paramId;
 static int paramCache[SZ_PARAMETER];
 
+/* Parameter Formattings */
+#define DISPLAY_NUM            0
+#define DISPLAY_NUM_FRACT_1    0    /* 12.3 */
+#define DISPLAY_NUM_FRACT_2    1    /* 1.23 */
+#define DISPLAY_NUM_INT        6    /* 123  */
+#define DISPLAY_STR_NC_NO    -(0+1) /* if false: "NC" else "NO" */
+#define DISPLAY_STR_OFF_ON   -(7+1) /* if false: "OFF" else "ON" */
+#define DISPLAY_STR_NONE     -(14+1)/* "---" */
+
+static const char displayString[] =
+    " NC| NO"  //  0
+    "OFF| ON"  //  7
+    "---|---"  //  7
+;              // +7
+
 static const int paramMin[] =     {0,   1,  30,  10, -70,  0, 0, 300,     0,  1};
 static const int paramMax[] =     {1, 150,  70,  45,  70, 10, 1, 550,     0, 15};
 static const int paramDefault[] = {0,  20,  50,  20,   0,  0, 0, 440, MAGIC,  8};
+static const int8_t paramDisplay[] = {
+    [PARAM_RELAY_MODE]             = DISPLAY_STR_NC_NO,
+    [PARAM_RELAY_HYSTERESIS]       = DISPLAY_NUM_FRACT_1,
+    [PARAM_MAX_TEMPERATURE]        = DISPLAY_NUM_INT,
+    [PARAM_MIN_TEMPERATURE]        = DISPLAY_NUM_INT,
+    [PARAM_TEMPERATURE_CORRECTION] = DISPLAY_NUM_FRACT_1,
+    [PARAM_RELAY_DELAY]            = DISPLAY_NUM_INT,
+    [PARAM_OVERHEAT_INDICATION]    = DISPLAY_STR_OFF_ON,
+    [PARAM_THRESHOLD]              = DISPLAY_NUM_FRACT_1,
+    [MagicId]                      = DISPLAY_STR_NONE,
+    [PARAM_FERMENTATION_TIME]      = DISPLAY_NUM_INT
+};
 
 
 /**
@@ -206,66 +233,24 @@ void decParamId()
  */
 void paramToString (uint8_t id, char *strBuff)
 {
-    switch (id) {
-    case PARAM_RELAY_MODE:
-        ( (unsigned char*) strBuff) [0] = 'N';
+    int value;
+    int8_t  format;
 
-        if (paramCache[id]) {
-            ( (unsigned char*) strBuff) [1] = 'O';
-        } else {
-            ( (unsigned char*) strBuff) [1] = 'C';
-        }
+    if (id >= SZ_PARAMETER)
+        id = MagicId;
 
-        ( (unsigned char*) strBuff) [2] = 0;
-        break;
+    value = paramCache[id];
+    format = paramDisplay[id];
 
-    case PARAM_RELAY_HYSTERESIS:
-        itofpa (paramCache[id], strBuff, 0);
-        break;
-
-    case PARAM_MAX_TEMPERATURE:
-        itofpa (paramCache[id], strBuff, 6);
-        break;
-
-    case PARAM_MIN_TEMPERATURE:
-        itofpa (paramCache[id], strBuff, 6);
-        break;
-
-    case PARAM_TEMPERATURE_CORRECTION:
-        itofpa (paramCache[id], strBuff, 0);
-        break;
-
-    case PARAM_RELAY_DELAY:
-        itofpa (paramCache[id], strBuff, 6);
-        break;
-
-    case PARAM_OVERHEAT_INDICATION:
-        ( (unsigned char*) strBuff) [0] = 'O';
-
-        if (paramCache[id]) {
-            ( (unsigned char*) strBuff) [1] = 'N';
-            ( (unsigned char*) strBuff) [2] = ' ';
-        } else {
-            ( (unsigned char*) strBuff) [1] = 'F';
-            ( (unsigned char*) strBuff) [2] = 'F';
-        }
-
-        ( (unsigned char*) strBuff) [3] = 0;
-        break;
-
-    case PARAM_THRESHOLD:
-        itofpa (paramCache[id], strBuff, 0);
-        break;
-
-    case PARAM_FERMENTATION_TIME:
-        itofpa (paramCache[id], strBuff, 6);
-        break;
-
-    default: // Display "OFF" to all unknown ID
-        ( (unsigned char*) strBuff) [0] = 'O';
-        ( (unsigned char*) strBuff) [1] = 'F';
-        ( (unsigned char*) strBuff) [2] = 'F';
-        ( (unsigned char*) strBuff) [3] = 0;
+    if (format >= DISPLAY_NUM) {
+        itofpa (value, strBuff, format);
+    }
+    else {
+        format = (value & 1)*4 - format - 1;
+        strBuff[0] = displayString[format];
+        strBuff[1] = displayString[format+1];
+        strBuff[2] = displayString[format+2];
+        strBuff[3] = 0;
     }
 }
 
