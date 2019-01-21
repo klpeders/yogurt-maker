@@ -24,12 +24,12 @@
  * P0 - | C | Cooling/Heating
  *            (relay ON when temperature is over(C)/below(H) threshold value)
  * P1 - | 2 | 0.1 ... 15.0 - Hysteresis
- * P2 - |110| 110 ... -45 - Maximum allowed temperature value
- * P3 - |-50| -50 ... 105 Minimum allowed temperature value
+ * P2 - | 50| 30 ... 70 - Maximum allowed temperature value
+ * P3 - | 20| 10 ... 45 Minimum allowed temperature value
  * P4 - | 0 | 7.0 ... -7.0 Correction of temperature value
  * P5 - | 0 | 0 ... 10 Relay switching delay in minutes
  * P6 - |Off| On/Off Indication of overheating
- * P7 - | 44| Threshold value in degrees of Celsius
+ * P7 - | 44| 30.0 ... 55.0 Threshold value in degrees of Celsius
  * FT - | 8h| 1h ... 15h Fermentation time in hours
  */
 
@@ -43,9 +43,9 @@
 
 static unsigned char paramId;
 static int paramCache[10];
-const int paramMin[] = {0, 1, 30, 10, -70, 0, 0, 300, 0, 1};
-const int paramMax[] = {1, 150, 70, 45, 70, 10, 1, 550, 0, 15};
-const int paramDefault[] = {0, 20, 50, 20, 0, 0, 0, 440, 0, 8};
+const int paramMin[] =     {0,   1,  30,  10, -70,  0, 0, 300, 0,  1};
+const int paramMax[] =     {1, 150,  70,  45,  70, 10, 1, 550, 0, 15};
+const int paramDefault[] = {0,  20,  50,  20,   0,  0, 0, 440, 0,  8};
 
 /**
  * @brief Check values in the EEPROM to be correct then load them into
