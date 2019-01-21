@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <string.h>
+
 #include "timer.h"
 #include "stm8s003/clock.h"
 #include "stm8s003/timer.h"
@@ -152,6 +153,7 @@ uint8_t getUptimeSeconds()
     return (uint8_t) ( (uptime >> SECONDS_FIRST_BIT) & BITMASK (BITS_FOR_SECONDS) );
 }
 
+#ifdef CONFIG_ENABLE_FULL_UPTIME
 /**
  * @brief Gets minutes part of time being passed since last reset.
  * @return minutes part of uptime.
@@ -178,6 +180,7 @@ uint8_t getUptimeDays()
 {
     return (uint8_t) ( (uptime >> DAYS_FIRST_BIT) & BITMASK (BITS_FOR_DAYS) );
 }
+#endif
 
 /**
  * @brief Constructs string that represents current uptime using given format.
@@ -200,6 +203,7 @@ void uptimeToString (char *strBuff, const char *format)
 
     for (i = 0; format[i] != 0; i++) {
         switch (format[i]) {
+#ifdef CONFIG_ENABLE_FULL_UPTIME
         case 'd':
         case 'D':
             v = getUptimeDays();
@@ -247,7 +251,7 @@ void uptimeToString (char *strBuff, const char *format)
             }
 
             break;
-
+#endif
         case 't':
             v = getFTimerMinutes();
             j = 1;
@@ -303,6 +307,7 @@ void TIM4_UPD_handler() __interrupt (23)
         uptime &= NBITMASK (SECONDS_FIRST_BIT);
         uptime += (unsigned long) 1 << SECONDS_FIRST_BIT;
 
+#ifdef CONFIG_ENABLE_FULL_UPTIME
         // Increment minutes count when 60 seconds have passed.
         if ( ( (uint8_t) (uptime >> SECONDS_FIRST_BIT) & BITMASK (BITS_FOR_SECONDS) ) == 60) {
             uptime &= NBITMASK (MINUTES_FIRST_BIT);
@@ -320,7 +325,7 @@ void TIM4_UPD_handler() __interrupt (23)
             uptime &= NBITMASK (DAYS_FIRST_BIT);
             uptime += (unsigned long) 1 << DAYS_FIRST_BIT;
         }
-
+#endif
         // Decrement fermentation timer value.
         if (isFTimer() && fTimerSeconds == getUptimeSeconds() ) {
             if (getFTimerMinutes() > 0) {
