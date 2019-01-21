@@ -77,8 +77,6 @@
 static uint8_t activeSegId;
 static uint8_t display[8];
 
-static void setDigit (uint8_t, uint8_t, bool);
-
 static bool displayOff;
 static bool testMode;
 
@@ -114,11 +112,17 @@ static const uint8_t font[] = {
     'F', bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_E),
     'H', bit(SEG_B) | bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_E),
     'L', bit(SEG_F) | bit(SEG_D) | bit(SEG_E),
-    'N', bit(SEG_C) | bit(SEG_G) | bit(SEG_E),
+    'N', bit(SEG_B) | bit(SEG_F) | bit(SEG_C) | bit(SEG_A) | bit(SEG_E),
     'O', bit(SEG_B) | bit(SEG_F) | bit(SEG_C) | bit(SEG_A) | bit(SEG_D) | bit(SEG_E),
     'P', bit(SEG_B) | bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_E),
     'R', bit(SEG_G) | bit(SEG_E),
     'T', bit(SEG_F) | bit(SEG_G) | bit(SEG_D) | bit(SEG_E),
+    'c', bit(SEG_G) | bit(SEG_E) | bit(SEG_D),
+    'h', bit(SEG_F) | bit(SEG_E) | bit(SEG_G) | bit(SEG_C),
+    'o', bit(SEG_G) | bit(SEG_C) | bit(SEG_D) | bit(SEG_E),
+    'n', bit(SEG_C) | bit(SEG_G) | bit(SEG_E),
+    'r', bit(SEG_G) | bit(SEG_E),
+    't', bit(SEG_F) | bit(SEG_G) | bit(SEG_D) | bit(SEG_E),
     0,   0
 };
 
@@ -253,11 +257,71 @@ void setDisplayOff (bool val)
 }
 
 /**
+ * @brief Sets bits within display's buffer appropriate to given value.
+ */
+static void paintChar(uint8_t mask, uint8_t id)
+{
+    int8_t i;
+
+    for (i = 0; i < 8; i++, mask >>= 1)
+        if (mask & 1)
+            display[i] &= ~id;
+        else
+            display[i] |= id;
+}
+
+
+/**
+ * @brief Sets bits within display's buffer appropriate to given value.
+ *  So this symbol will be shown on display during refreshDisplay() call.
+ *  When test mode is enabled the display's buffer will not be updated.
+ *
+ * @param id
+ *  Identifier of character's position on display.
+ *  Accepted values are: 0, 1, 2.
+ * @param val
+ *  Character to be represented on SSD at position being designated by id.
+ *  Due to limited capabilities of SSD some characters are shown in a very
+ *  schematic manner.
+ *  Accepted values are: ANY.
+ *  But only actual characters are defined. For the rest of values the
+ *  '_' symbol is shown.
+ * @param dot
+ *  Enable dot (decimal point) for the character.
+ *  Accepted values true/false.
+ *
+ */
+static void setDigit (uint8_t id, uint8_t val, bool dot)
+{
+#ifdef RIGHT_ALIGN_TEXT
+    static const uint8_t digitVec[] = {DIGIT_1, DIGIT_2, DIGIT_3};
+#else
+    static const uint8_t digitVec[] = {DIGIT_3, DIGIT_2, DIGIT_1};
+#endif
+    uint8_t mask;
+    const uint8_t *p;
+
+    if (id > 2) return;
+
+    if (testMode) return;
+
+    for (p = font; p[0]; p += 2)
+        if (p[0] == val) break;
+    mask = p[1];
+
+    if (dot)
+        mask |= bit(SEG_P);
+
+    paintChar(mask, digitVec[id]);
+}
+
+
+/**
  * @brief Sets symbols of given null-terminated string into display's buffer.
  * @param val
  *  pointer to the null-terminated string.
  */
-void setDisplayStr (const uint8_t *val)
+void setDisplayStr (const char *val)
 {
 #ifdef RIGHT_ALIGN_TEXT
     uint8_t i, d;
@@ -308,64 +372,4 @@ void setDisplayStr (const uint8_t *val)
         setDigit (i, c, d);
     }
 #endif
-}
-
-
-/**
- * @brief Sets bits within display's buffer appropriate to given value.
- */
-static void paintChar(uint8_t mask, uint8_t id)
-{
-    int8_t i;
-
-    for (i = 0; i < 8; i++, mask >>= 1)
-        if (mask & 1)
-            display[i] &= ~id;
-        else
-            display[i] |= id;
-}
-
-
-/**
- * @brief Sets bits within display's buffer appropriate to given value.
- *  So this symbol will be shown on display during refreshDisplay() call.
- *  When test mode is enabled the display's buffer will not be updated.
- *
- * @param id
- *  Identifier of character's position on display.
- *  Accepted values are: 0, 1, 2.
- * @param val
- *  Character to be represented on SSD at position being designated by id.
- *  Due to limited capabilities of SSD some characters are shown in a very
- *  schematic manner.
- *  Accepted values are: ANY.
- *  But only actual characters are defined. For the rest of values the
- *  '_' symbol is shown.
- * @param dot
- *  Enable dot (decimal point) for the character.
- *  Accepted values true/false.
- *
- */
-static void setDigit (uint8_t id, uint8_t val, bool dot)
-{
-#ifdef RIGHT_ALIGN
-    static const uint8_t digitVec[] = {DIGIT_1, DIGIT_2, DIGIT_3};
-#else
-    static const uint8_t digitVec[] = {DIGIT_3, DIGIT_2, DIGIT_1};
-#endif
-    uint8_t mask;
-    const uint8_t *p;
-
-    if (id > 2) return;
-
-    if (testMode) return;
-
-    for (p = font; p[0]; p += 2)
-        if (p[0] == val) break;
-    mask = p[1];
-
-    if (dot)
-        mask |= bit(SEG_P);
-
-    paintChar(mask, digitVec[id]);
 }

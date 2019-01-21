@@ -69,7 +69,7 @@ int main()
                     }
                 } else {
                     // Show "n.t.r." -> no timer is running
-                    setDisplayStr ("N.T.R.");
+                    setDisplayStr ("n.t.r.");
                     continue;
                 }
 
