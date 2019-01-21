@@ -18,17 +18,15 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#ifndef bool
-#define bool    _Bool
-#define true    1
-#define false   0
-#endif
+#include <stdint.h>
+#include <stdbool.h>
 
 void initDisplay();
 void refreshDisplay();
 void setDisplayInt (int);
 void setDisplayOff (bool val);
-void setDisplayStr (const unsigned char*);
-void setDisplayTestMode (bool, char* str);
+void setDisplayStr (const char *str);
+void setDisplayTestMode (bool, const char *str);
+void itofpa (int val, char* str, uint8_t pointPosition);
 
 #endif

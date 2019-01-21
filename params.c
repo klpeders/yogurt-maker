@@ -33,19 +33,21 @@
  * FT - | 8h| 1h ... 15h Fermentation time in hours
  */
 
+#include <stdint.h>
+
 #include "params.h"
 #include "stm8s003/prom.h"
 #include "buttons.h"
+#include "display.h"
 
 /* Definitions for EEPROM */
 #define EEPROM_BASE_ADDR        0x4000
 #define EEPROM_PARAMS_OFFSET    100
 
-static unsigned char paramId;
-static int paramCache[10];
-const int paramMin[] =     {0,   1,  30,  10, -70,  0, 0, 300, 0,  1};
-const int paramMax[] =     {1, 150,  70,  45,  70, 10, 1, 550, 0, 15};
-const int paramDefault[] = {0,  20,  50,  20,   0,  0, 0, 440, 0,  8};
+#define MAGIC          0x4E46
+static const int paramMin[] =     {0,   1,  30,  10, -70,  0, 0, 300,     0,  1};
+static const int paramMax[] =     {1, 150,  70,  45,  70, 10, 1, 550,     0, 15};
+static const int paramDefault[] = {0,  20,  50,  20,   0,  0, 0, 440, MAGIC,  8};
 
 /**
  * @brief Check values in the EEPROM to be correct then load them into
@@ -76,7 +78,7 @@ void initParamsEEPROM()
  * @param id
  * @return
  */
-int getParamById (unsigned char id)
+int getParamById (uint8_t id)
 {
     if (id < 10) {
         return paramCache[id];
@@ -90,7 +92,7 @@ int getParamById (unsigned char id)
  * @param id
  * @param val
  */
-void setParamById (unsigned char id, int val)
+void setParamById (uint8_t id, int val)
 {
     if (id < 10) {
         paramCache[id] = val;
@@ -143,7 +145,7 @@ void decParam()
  * @brief
  * @return
  */
-unsigned char getParamId()
+uint8_t getParamId()
 {
     return paramId;
 }
@@ -152,7 +154,7 @@ unsigned char getParamId()
  * @brief
  * @param val
  */
-void setParamId (unsigned char val)
+void setParamId (uint8_t val)
 {
     if (val < 10) {
         paramId = val;
@@ -190,7 +192,7 @@ void decParamId()
  * @param strBuff
  *  A pointer to a string buffer where the result should be placed.
  */
-void paramToString (unsigned char id, unsigned char* strBuff)
+void paramToString (uint8_t id, char *strBuff)
 {
     switch (id) {
     case PARAM_RELAY_MODE:

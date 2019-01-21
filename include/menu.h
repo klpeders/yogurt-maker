@@ -18,6 +18,9 @@
 #ifndef MENU_H
 #define MENU_H
 
+#include <stdint.h>
+#include <stdbool.h>
+
 /* Menu sections */
 #define MENU_ROOT          0
 #define MENU_SET_TIMER     1
@@ -34,7 +37,7 @@
 
 void initMenu();
 void refreshMenu();
-unsigned char getMenuDisplay();
-void feedMenu (unsigned char event);
+uint8_t getMenuDisplay();
+void feedMenu (uint8_t event);
 
 #endif

@@ -18,11 +18,8 @@
 #ifndef BUTTONS_H
 #define BUTTONS_H
 
-#ifndef bool
-#define bool    _Bool
-#define true    1
-#define false   0
-#endif
+#include <stdint.h>
+#include <stdbool.h>
 
 void initButtons();
 bool isButton1();
@@ -31,8 +28,8 @@ bool isButton3();
 bool getButton1();
 bool getButton2();
 bool getButton3();
-unsigned char getButton();
-unsigned char getButtonDiff();
+uint8_t getButton();
+uint8_t getButtonDiff();
 void EXTI2_handler() __interrupt (5);
 
 #endif

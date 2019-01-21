@@ -19,8 +19,8 @@
  * Control functions for relay.
  */
 
-#include "relay.h"
 #include "stm8s003/gpio.h"
+#include "relay.h"
 #include "adc.h"
 #include "timer.h"
 #include "params.h"
@@ -34,10 +34,10 @@
 #define RELAY_PRE_BUZZ_PULSES   10
 #define RELAY_BUZZ_ON_PULSES    60
 
-static unsigned int pulses;
+static uin16_t pulses;
 #endif
 
-static unsigned int timer;
+static uint16_t timer;
 static bool state;
 static bool relayEnable;
 

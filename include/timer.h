@@ -18,24 +18,21 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#ifndef bool
-#define bool    _Bool
-#define true    1
-#define false   0
-#endif
+#include <stdint.h>
+#include <stdbool.h>
 
 void initTimer();
 void startFTimer();
 void stopFTimer();
 void resetUptime();
 bool isFTimer();
-unsigned long getUptime();
-unsigned int getUptimeTicks();
-unsigned char getUptimeSeconds();
-unsigned char getUptimeMinutes();
-unsigned char getUptimeHours();
-unsigned char getUptimeDays();
-void uptimeToString (unsigned char*, const unsigned char*);
+uint32_t getUptime();
+uint16_t getUptimeTicks();
+uint8_t getUptimeSeconds();
+uint8_t getUptimeMinutes();
+uint8_t getUptimeHours();
+uint8_t getUptimeDays();
+void uptimeToString (char*, const char*);
 void TIM4_UPD_handler() __interrupt (23);
 
 #endif

@@ -21,8 +21,8 @@
  * The port D6 (pin 3) is used as analog input (AIN6).
  */
 
-#include "adc.h"
 #include "stm8s003/adc.h"
+#include "adc.h"
 #include "params.h"
 
 // Averaging bits
@@ -34,7 +34,7 @@
 
 /* The lookup table contains raw ADC values for every degree of Celsius
    from -52C to 112C. */
-const unsigned int rawAdc[] = {
+const uint16_t rawAdc[] = {
     974, 971, 967, 964, 960, 956, 953, 948, 944, 940,
     935, 930, 925, 920, 914, 909, 903, 897, 891, 884,
     877, 871, 864, 856, 849, 841, 833, 825, 817, 809,
@@ -54,8 +54,8 @@ const unsigned int rawAdc[] = {
     49, 48, 47, 47, 46
 };
 
-static unsigned int result;
-static unsigned long averaged;
+static uint16_t result;
+static uint32_t averaged;
 
 /**
  * @brief Initialize ADC's configuration registers.
@@ -82,7 +82,7 @@ void startADC()
  * @brief Gets raw result of last data conversion.
  * @return raw result.
  */
-unsigned int getAdcResult()
+uint16_t getAdcResult()
 {
     return result;
 }
@@ -92,9 +92,9 @@ unsigned int getAdcResult()
  *  convertion.
  * @return averaged result.
  */
-unsigned int getAdcAveraged()
+uint16_t getAdcAveraged()
 {
-    return (unsigned int) (averaged >> ADC_AVERAGING_BITS);
+    return (uint16_t) (averaged >> ADC_AVERAGING_BITS);
 }
 
 /**
@@ -104,13 +104,13 @@ unsigned int getAdcAveraged()
  */
 int getTemperature()
 {
-    unsigned int val = averaged >> ADC_AVERAGING_BITS;
-    unsigned char rightBound = ADC_RAW_TABLE_SIZE;
-    unsigned char leftBound = 0;
+    uint16_t val = getAdcAveraged();
+    uint8_t rightBound = ADC_RAW_TABLE_SIZE;
+    uint8_t leftBound = 0;
 
     // search through the rawAdc lookup table
     while ( (rightBound - leftBound) > 1) {
-        unsigned char midId = (leftBound + rightBound) >> 1;
+        uint8_t midId = (leftBound + rightBound) >> 1;
 
         if (val > rawAdc[midId]) {
             rightBound = midId;
@@ -137,14 +137,11 @@ int getTemperature()
  */
 void ADC1_EOC_handler() __interrupt (22)
 {
+    int16_t x;
     result = ADC_DRH << 2;
     result |= ADC_DRL;
     ADC_CSR &= ~0x80;   // reset EOC
 
-    // Averaging result
-    if (averaged == 0) {
-        averaged = result << ADC_AVERAGING_BITS;
-    } else {
-        averaged += result - (averaged >> ADC_AVERAGING_BITS);
-    }
+    x = result - getAdcAveraged();
+    averaged += x;
 }

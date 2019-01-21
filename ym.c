@@ -15,6 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
 #include "adc.h"
 #include "buttons.h"
 #include "display.h"
@@ -27,20 +28,6 @@
 #define INTERRUPT_DISABLE   __asm sim __endasm;
 #define WAIT_FOR_INTERRUPT  __asm wfi __endasm;
 
-void strConcat (unsigned char * from, unsigned char * to)
-{
-    unsigned char i, s;
-
-    for (i = 0; to[i] != 0; i++);
-
-    s = i;
-
-    for (i = 0; from[i] != 0; i++) {
-        to[s + i] = from[i];
-    }
-
-    to[s + i] = 0;
-}
 
 /**
  * @brief
@@ -111,7 +98,7 @@ int main()
             setDisplayStr ( (char *) stringBuffer);
         } else {
             setDisplayStr ("ERR");
-            setDisplayOff ( (bool) ( (unsigned char) getUptimeTicks() & 0x80) );
+            setDisplayOff ( (bool) ( (uint8_t) getUptimeTicks() & 0x80) );
         }
 
         WAIT_FOR_INTERRUPT

@@ -20,6 +20,8 @@
  * The TIM4 interrupt (23) is used to get signal on update event.
  */
 
+#include <stdint.h>
+#include <string.h>
 #include "timer.h"
 #include "stm8s003/clock.h"
 #include "stm8s003/timer.h"
@@ -47,36 +49,14 @@
  * |--Day--|--Hour--|--Minute--|--Second--|--Ticks--|
  * 31      26       21         15         9         0
  */
-static unsigned long uptime;
+static uint32_t uptime;
 /**
  * |--Hour--|--Minute--|
  * 11       6          0
  */
-static unsigned int fTimer;
-static unsigned char fTimerSeconds;
+static uint16_t fTimer;
+static uint8_t fTimerSeconds;
 
-/**
- * @brief Utility function. Appends characters from one string to the
- *  end of another string.
- * @param from
- *  Pointer to the source string.
- * @param dst
- *  Pointer to the destination string.
- */
-static void strAppend (unsigned char * src, unsigned char * dst)
-{
-    unsigned char i, s;
-
-    for (i = 0; dst[i] != 0; i++);
-
-    s = i;
-
-    for (i = 0; src[i] != 0; i++) {
-        dst[s + i] = src[i];
-    }
-
-    dst[s + i] = 0;
-}
 
 /**
  * @brief Initialize timer's configuration registers and reset uptime.
@@ -112,18 +92,18 @@ void stopFTimer()
  * @brief Gets minutes part of the fermentation timer current value.
  * @return number of minutes remaining until end of that hour.
  */
-unsigned char getFTimerMinutes()
+uint8_t getFTimerMinutes()
 {
-    return (unsigned char) (fTimer & BITMASK (BITS_FOR_MINUTES) );
+    return (uint8_t) (fTimer & BITMASK (BITS_FOR_MINUTES) );
 }
 
 /**
  * @brief Gets hours part of the fermentation timer current value.
  * @return number of hours remaining.
  */
-unsigned char getFTimerHours()
+uint8_t getFTimerHours()
 {
-    return (unsigned char) (fTimer >> BITS_FOR_MINUTES);
+    return (uint8_t) (fTimer >> BITS_FOR_MINUTES);
 }
 
 /**
@@ -149,7 +129,7 @@ void resetUptime()
  * 31      26       21         15         9         0
  * @return value of uptime counter.
  */
-unsigned long getUptime()
+uint32_t getUptime()
 {
     return uptime;
 }
@@ -158,45 +138,45 @@ unsigned long getUptime()
  * @brief Gets ticks part of uptime counter.
  * @return ticks part of uptime.
  */
-unsigned int getUptimeTicks()
+uint16_t getUptimeTicks()
 {
-    return (unsigned int) (uptime & BITMASK (BITS_FOR_TICKS) );
+    return (uint16_t) (uptime & BITMASK (BITS_FOR_TICKS) );
 }
 
 /**
  * @brief Gets seconds part of time being passed since last reset.
  * @return seconds part of uptime.
  */
-unsigned char getUptimeSeconds()
+uint8_t getUptimeSeconds()
 {
-    return (unsigned char) ( (uptime >> SECONDS_FIRST_BIT) & BITMASK (BITS_FOR_SECONDS) );
+    return (uint8_t) ( (uptime >> SECONDS_FIRST_BIT) & BITMASK (BITS_FOR_SECONDS) );
 }
 
 /**
  * @brief Gets minutes part of time being passed since last reset.
  * @return minutes part of uptime.
  */
-unsigned char getUptimeMinutes()
+uint8_t getUptimeMinutes()
 {
-    return (unsigned char) ( (uptime >> MINUTES_FIRST_BIT) & BITMASK (BITS_FOR_MINUTES) );
+    return (uint8_t) ( (uptime >> MINUTES_FIRST_BIT) & BITMASK (BITS_FOR_MINUTES) );
 }
 
 /**
  * @brief Gets hours part of time being passed since last reset.
  * @return hours part of uptime.
  */
-unsigned char getUptimeHours()
+uint8_t getUptimeHours()
 {
-    return (unsigned char) ( (uptime >> HOURS_FIRST_BIT) & BITMASK (BITS_FOR_HOURS) );
+    return (uint8_t) ( (uptime >> HOURS_FIRST_BIT) & BITMASK (BITS_FOR_HOURS) );
 }
 
 /**
  * @brief Gets amount of days being passed since last reset.
  * @return amount of days.
  */
-unsigned char getUptimeDays()
+uint8_t getUptimeDays()
 {
-    return (unsigned char) ( (uptime >> DAYS_FIRST_BIT) & BITMASK (BITS_FOR_DAYS) );
+    return (uint8_t) ( (uptime >> DAYS_FIRST_BIT) & BITMASK (BITS_FOR_DAYS) );
 }
 
 /**
@@ -213,9 +193,10 @@ unsigned char getUptimeDays()
  * Example: "dd.hH.MM" for 00 days, 10 hours and 02 minutes will produce
  * ".10.02" result.
  */
-void uptimeToString (unsigned char* strBuff, const unsigned char* format)
+void uptimeToString (char *strBuff, const char *format)
 {
-    unsigned char i, j, f[3], v;
+    uint8_t i, j, v;
+    char f[3];
 
     for (i = 0; format[i] != 0; i++) {
         switch (format[i]) {
@@ -292,7 +273,7 @@ void uptimeToString (unsigned char* strBuff, const unsigned char* format)
         default:
             f[0] = format[i];
             f[1] = 0;
-            strAppend ( (unsigned char *) f, strBuff);
+            strcat (strBuff, f);
             continue;
         }
 
@@ -305,7 +286,7 @@ void uptimeToString (unsigned char* strBuff, const unsigned char* format)
         }
 
         // Append substring at the end of the resulting string
-        strAppend ( (unsigned char *) f, strBuff);
+        strcat (strBuff, f);
     }
 
 }
@@ -318,24 +299,24 @@ void TIM4_UPD_handler() __interrupt (23)
 {
     TIM4_SR &= ~TIM_SR1_UIF; // Reset flag
 
-    if ( ( (unsigned int) (uptime & BITMASK (BITS_FOR_TICKS) ) ) >= TICKS_IN_SECOND) {
+    if ( ( (uint16_t) (uptime & BITMASK (BITS_FOR_TICKS) ) ) >= TICKS_IN_SECOND) {
         uptime &= NBITMASK (SECONDS_FIRST_BIT);
         uptime += (unsigned long) 1 << SECONDS_FIRST_BIT;
 
         // Increment minutes count when 60 seconds have passed.
-        if ( ( (unsigned char) (uptime >> SECONDS_FIRST_BIT) & BITMASK (BITS_FOR_SECONDS) ) == 60) {
+        if ( ( (uint8_t) (uptime >> SECONDS_FIRST_BIT) & BITMASK (BITS_FOR_SECONDS) ) == 60) {
             uptime &= NBITMASK (MINUTES_FIRST_BIT);
             uptime += (unsigned long) 1 << MINUTES_FIRST_BIT;
         }
 
         // Increment hours count when 60 minutes have passed.
-        if ( ( (unsigned char) (uptime >> MINUTES_FIRST_BIT) & BITMASK (BITS_FOR_MINUTES) ) == 60) {
+        if ( ( (uint8_t) (uptime >> MINUTES_FIRST_BIT) & BITMASK (BITS_FOR_MINUTES) ) == 60) {
             uptime &= NBITMASK (HOURS_FIRST_BIT);
             uptime += (unsigned long) 1 << HOURS_FIRST_BIT;
         }
 
         // Increment days count when 24 hours have passed.
-        if ( ( (unsigned char) (uptime >> HOURS_FIRST_BIT) & BITMASK (BITS_FOR_HOURS) ) == 24) {
+        if ( ( (uint8_t) (uptime >> HOURS_FIRST_BIT) & BITMASK (BITS_FOR_HOURS) ) == 24) {
             uptime &= NBITMASK (DAYS_FIRST_BIT);
             uptime += (unsigned long) 1 << DAYS_FIRST_BIT;
         }
@@ -360,11 +341,11 @@ void TIM4_UPD_handler() __interrupt (23)
     // Try not to call all refresh functions at once.
     buzzRelay ();
 
-    if ( ( (unsigned char) getUptimeTicks() & 0x0F) == 1) {
+    if ( ( (uint8_t) getUptimeTicks() & 0x0F) == 1) {
         refreshMenu();
-    } else if ( ( (unsigned char) getUptimeTicks() & 0xFF) == 2) {
+    } else if ( ( (uint8_t) getUptimeTicks() & 0xFF) == 2) {
         startADC();
-    } else if ( ( (unsigned char) getUptimeTicks() & 0xFF) == 3) {
+    } else if ( ( (uint8_t) getUptimeTicks() & 0xFF) == 3) {
         refreshRelay();
     }
 

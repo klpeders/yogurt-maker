@@ -31,8 +31,8 @@
 #define MENU_5_SEC_PASSED   MENU_1_SEC_PASSED * 5
 #define MENU_AUTOINC_DELAY  MENU_1_SEC_PASSED / 8
 
-static unsigned char menuDisplay;
-static unsigned char menuState;
+static uint8_t menuDisplay;
+static uint8_t menuState;
 /* Timer counter of menu. Being incremented on every call of refreshMenu() function.
  * Used to handle menu timeouts and handling of actions on holding a button. */
 static unsigned int timer;
@@ -50,7 +50,7 @@ void initMenu()
  * @brief Gets menu state for displaying appropriate value on the SSD.
  * @return
  */
-unsigned char getMenuDisplay()
+uint8_t getMenuDisplay()
 {
     return menuDisplay;
 }
@@ -72,7 +72,7 @@ unsigned char getMenuDisplay()
  *  MENU_EVENT_RELEASE_BUTTON3
  *  MENU_EVENT_CHECK_TIMER
  */
-void feedMenu (unsigned char event)
+void feedMenu (uint8_t event)
 {
     bool blink;
 
@@ -208,12 +208,6 @@ void feedMenu (unsigned char event)
                 }
             }
 
-            if (getButton1() && timer > MENU_3_SEC_PASSED) {
-                timer = 0;
-                menuState = menuDisplay = MENU_SELECT_PARAM;
-                break;
-            }
-
             if (timer > MENU_5_SEC_PASSED) {
                 timer = 0;
                 storeParams();
@@ -263,7 +257,7 @@ void feedMenu (unsigned char event)
             if (getButton2() || getButton3() ) {
                 blink = false;
             } else {
-                blink = (bool) ( (unsigned char) getUptimeTicks() & 0x80);
+                blink = (bool) ( (uint8_t) getUptimeTicks() & 0x80);
             }
 
             if (timer > MENU_1_SEC_PASSED + MENU_AUTOINC_DELAY) {

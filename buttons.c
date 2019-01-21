@@ -20,8 +20,8 @@
  * The EXTI2 interrupt (5) is used to get signal on changing buttons state.
  */
 
-#include "buttons.h"
 #include "stm8s003/gpio.h"
+#include "buttons.h"
 #include "menu.h"
 
 /* Definition for buttons */
@@ -34,8 +34,8 @@
 // PC.5
 #define BUTTON3_BIT    0x20
 
-static unsigned char status;
-static unsigned char diff;
+static uint8_t status;
+static uint8_t diff;
 
 /**
  * @brief Configure approptiate pins of MCU as digital inputs. Set
@@ -56,7 +56,7 @@ void initButtons()
  *  request being handled.
  * @return status byte of buttons
  */
-unsigned char getButton()
+uint8_t getButton()
 {
     return status;
 }
@@ -65,7 +65,7 @@ unsigned char getButton()
  * @brief
  * @return
  */
-unsigned char getButtonDiff()
+uint8_t getButtonDiff()
 {
     return diff;
 }
@@ -145,7 +145,7 @@ bool isButton3()
  */
 void EXTI2_handler() __interrupt (5)
 {
-    unsigned char event;
+    uint8_t event;
     diff = status ^ ~ (BUTTONS_PORT & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT) );
     status = ~ (BUTTONS_PORT & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT) );
 

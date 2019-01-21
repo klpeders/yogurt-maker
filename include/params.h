@@ -18,6 +18,9 @@
 #ifndef PARAMS_H
 #define PARAMS_H
 
+#include <stdint.h>
+#include <stdbool.h>
+
 /* Definition for parameter identifiers */
 #define PARAM_RELAY_MODE                0
 #define PARAM_RELAY_HYSTERESIS          1
@@ -36,12 +39,11 @@ void incParamId();
 void decParamId();
 void storeParams();
 void initParamsEEPROM();
-unsigned char getParamId();
-int getParamById (unsigned char);
+uint8_t getParamId();
+int getParamById (uint8_t);
 void setParam (int);
-void setParamId (unsigned char);
-void setParamById (unsigned char, int);
-void paramToString (unsigned char, unsigned char*);
-void itofpa (int, unsigned char*, unsigned char);
+void setParamId (uint8_t);
+void setParamById (uint8_t, int);
+void paramToString (uint8_t, char*);
 
 #endif
