@@ -36,18 +36,26 @@
 #include <stdint.h>
 
 #include "params.h"
-#include "stm8s003/prom.h"
 #include "buttons.h"
 #include "display.h"
+#include "persist.h"
 
-/* Definitions for EEPROM */
-#define EEPROM_BASE_ADDR        0x4000
-#define EEPROM_PARAMS_OFFSET    100
+#define N_PARAMETERS   7 // Number of P0 .. Pn parameters
 
 #define MAGIC          0x4E46
+#define MagicId        (N_PARAMETERS + 1)
+
+static uint8_t paramId;
+static int paramCache[SZ_PARAMETER];
+
 static const int paramMin[] =     {0,   1,  30,  10, -70,  0, 0, 300,     0,  1};
 static const int paramMax[] =     {1, 150,  70,  45,  70, 10, 1, 550,     0, 15};
 static const int paramDefault[] = {0,  20,  50,  20,   0,  0, 0, 440, MAGIC,  8};
+
+void storeParams(void)
+{
+    ee_storeParams(paramCache);
+}
 
 /**
  * @brief Check values in the EEPROM to be correct then load them into
@@ -55,19 +63,19 @@ static const int paramDefault[] = {0,  20,  50,  20,   0,  0, 0, 440, MAGIC,  8}
  */
 void initParamsEEPROM()
 {
-    if (getButton2() && getButton3() ) {
+    uint8_t i;
+
+    ee_loadParams (paramCache);
+
+    if (paramCache[MagicId] != MAGIC
+        || getButton2() && getButton3() ) {
+
         // Restore parameters to default values
-        for (paramId = 0; paramId < 10; paramId++) {
-            paramCache[paramId] = paramDefault[paramId];
+        for (i = 0; i < SZ_PARAMETER; i++) {
+            paramCache[i] = paramDefault[i];
         }
 
         storeParams();
-    } else {
-        // Load parameters from EEPROM
-        for (paramId = 0; paramId < 10; paramId++) {
-            paramCache[paramId] = * (int*) (EEPROM_BASE_ADDR + EEPROM_PARAMS_OFFSET
-                                            + (paramId * sizeof paramCache[0]) );
-        }
     }
 
     paramId = 0;
@@ -80,7 +88,7 @@ void initParamsEEPROM()
  */
 int getParamById (uint8_t id)
 {
-    if (id < 10) {
+    if (id < SZ_PARAMETER) {
         return paramCache[id];
     }
 
@@ -94,7 +102,7 @@ int getParamById (uint8_t id)
  */
 void setParamById (uint8_t id, int val)
 {
-    if (id < 10) {
+    if (id < SZ_PARAMETER) {
         paramCache[id] = val;
     }
 }
@@ -156,7 +164,7 @@ uint8_t getParamId()
  */
 void setParamId (uint8_t val)
 {
-    if (val < 10) {
+    if (val < SZ_PARAMETER) {
         paramId = val;
     }
 }
@@ -166,7 +174,7 @@ void setParamId (uint8_t val)
  */
 void incParamId()
 {
-    if (paramId < 7) {
+    if (paramId < N_PARAMETERS) {
         paramId++;
     } else {
         paramId = 0;
@@ -181,7 +189,7 @@ void decParamId()
     if (paramId > 0) {
         paramId--;
     } else {
-        paramId = 7;
+        paramId = N_PARAMETERS;
     }
 }
 
@@ -255,51 +263,6 @@ void paramToString (uint8_t id, char *strBuff)
         ( (unsigned char*) strBuff) [2] = 'F';
         ( (unsigned char*) strBuff) [3] = 0;
     }
-}
-
-/**
- * @brief Stores updated parameters from paramCache into EEPROM.
- */
-void storeParams()
-{
-    unsigned char i;
-
-    //  Check if the EEPROM is write-protected.  If it is then unlock the EEPROM.
-    if ( (FLASH_IAPSR & 0x08) == 0) {
-        FLASH_DUKR = 0xAE;
-        FLASH_DUKR = 0x56;
-    }
-
-    //  Write to the EEPROM parameters which value is changed.
-    for (i = 0; i < 10; i++) {
-        if (paramCache[i] != (* (int*) (EEPROM_BASE_ADDR + EEPROM_PARAMS_OFFSET
-                                        + (i * sizeof paramCache[0]) ) ) ) {
-            * (int*) (EEPROM_BASE_ADDR + EEPROM_PARAMS_OFFSET
-                      + (i * sizeof paramCache[0]) ) = paramCache[i];
-        }
-    }
-
-    //  Now write protect the EEPROM.
-    FLASH_IAPSR &= ~0x08;
-}
-/**
- * @brief
- * @param val
- * @param offset
- */
-static void writeEEPROM (unsigned char val, unsigned char offset)
-{
-    //  Check if the EEPROM is write-protected.  If it is then unlock the EEPROM.
-    if ( (FLASH_IAPSR & 0x08) == 0) {
-        FLASH_DUKR = 0xAE;
-        FLASH_DUKR = 0x56;
-    }
-
-    //  Write the data to the EEPROM.
-    (* (unsigned char*) (EEPROM_BASE_ADDR + offset) ) = val;
-
-    //  Now write protect the EEPROM.
-    FLASH_IAPSR &= ~0x08;
 }
 
 /**

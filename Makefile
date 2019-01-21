@@ -8,6 +8,8 @@ ProjectName            := yogurtmaker
 DEVICE                 := stm8
 CHIP                   := STM8S003F3P6
 
+## Configuration
+CONFIG := # CONFIG_ENABLE_FULL_UPTIME  CONFIG_USE_RELAY_BUZZ  RIGHT_ALIGN_TEXT
 
 ##
 ## Common variables
@@ -28,7 +30,7 @@ ObjectSuffix := .rel
 ##
 ## User defined environment variables
 ##
-SRCS := ym.c display.c timer.c buttons.c adc.c menu.c params.c relay.c
+SRCS := ym.c display.c timer.c buttons.c adc.c menu.c params.c relay.c persist.c
 OBJS := $(SRCS:%=$(BUILD)/%$(ObjectSuffix))
 
 
