@@ -42,7 +42,7 @@
 
 #define N_PARAMETERS   7 // Number of P0 .. Pn parameters
 
-#define MAGIC          0x4E46
+#define MAGIC          0x4E48
 #define MagicId        (N_PARAMETERS + 1)
 
 static uint8_t paramId;
@@ -63,14 +63,15 @@ static const char displayString[] =
     "---|---"  //  7
 ;              // +7
 
-static const int paramMin[] =     {0,   1,  30,  10, -70,  0, 0, 300,     0,  1};
-static const int paramMax[] =     {1, 150,  70,  45,  70, 10, 1, 550,     0, 15};
-static const int paramDefault[] = {0,  20,  50,  20,   0,  0, 0, 440, MAGIC,  8};
+static const int paramMin[] =     {0,   1,  300,  100, -70,  0, 0, 300,     0,  1};
+static const int paramMax[] =     {1, 150,  700,  450,  70, 10, 1, 550,     0, 15};
+static const int paramDefault[] = {0,  20,  500,  200,   0,  0, 0, 440, MAGIC,  8};
+static const uint8_t paramInc[] = {1,   1,   10,   10,   1,  1, 1,   5,     0,  1};
 static const int8_t paramDisplay[] = {
     [PARAM_RELAY_MODE]             = DISPLAY_STR_NC_NO,
     [PARAM_RELAY_HYSTERESIS]       = DISPLAY_NUM_FRACT_1,
-    [PARAM_MAX_TEMPERATURE]        = DISPLAY_NUM_INT,
-    [PARAM_MIN_TEMPERATURE]        = DISPLAY_NUM_INT,
+    [PARAM_MAX_TEMPERATURE]        = DISPLAY_NUM_FRACT_1,
+    [PARAM_MIN_TEMPERATURE]        = DISPLAY_NUM_FRACT_1,
     [PARAM_TEMPERATURE_CORRECTION] = DISPLAY_NUM_FRACT_1,
     [PARAM_RELAY_DELAY]            = DISPLAY_NUM_INT,
     [PARAM_OVERHEAT_INDICATION]    = DISPLAY_STR_OFF_ON,
@@ -161,10 +162,15 @@ void setParam (int val)
  */
 void incParam()
 {
-    if (paramId == PARAM_RELAY_MODE || paramId == PARAM_OVERHEAT_INDICATION) {
-        paramCache[paramId] = ~paramCache[paramId] & 0x0001;
-    } else if (paramCache[paramId] < paramMax[paramId]) {
-        paramCache[paramId]++;
+    uint8_t i = paramId;
+    int v = paramCache[i] + paramInc[i];
+
+    /* Check if id is a switch style parameter */
+    if (paramDisplay[i] < 0) {
+        paramCache[i] ^= 0x0001;
+    }
+    else if (v <= paramMax[i]) {
+        paramCache[i] = v;
     }
 }
 
@@ -173,10 +179,15 @@ void incParam()
  */
 void decParam()
 {
-    if (paramId == PARAM_RELAY_MODE || paramId == PARAM_OVERHEAT_INDICATION) {
-        paramCache[paramId] = ~paramCache[paramId] & 0x0001;
-    } else if (paramCache[paramId] > paramMin[paramId]) {
-        paramCache[paramId]--;
+    uint8_t i = paramId;
+    int v = paramCache[i] - paramInc[i];
+
+    /* Check if id is a switch style parameter */
+    if (paramDisplay[i] < 0) {
+        paramCache[i] ^= 0x0001;
+    }
+    else if (v >= paramMin[i]) {
+        paramCache[i] = v;
     }
 }
 
