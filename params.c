@@ -52,6 +52,10 @@ static const int paramMin[] =     {0,   1,  30,  10, -70,  0, 0, 300,     0,  1}
 static const int paramMax[] =     {1, 150,  70,  45,  70, 10, 1, 550,     0, 15};
 static const int paramDefault[] = {0,  20,  50,  20,   0,  0, 0, 440, MAGIC,  8};
 
+
+/**
+ * @brief Stores updated parameters in paramCache to EEPROM.
+ */
 void storeParams(void)
 {
     ee_storeParams(paramCache);
@@ -265,65 +269,3 @@ void paramToString (uint8_t id, char *strBuff)
     }
 }
 
-/**
- * @brief Construction of a string representation of the given value.
- *  To emulate a floating-point value, a decimal point can be inserted
- *  before a certain digit.
- *  When the decimal point is not needed, set pointPosition to 6 or more.
- * @param val
- *  the value to be processed.
- * @param str
- *  pointer to buffer for constructed string.
- * @param pointPosition
- *  put the decimal point in front of specified digit.
- */
-void itofpa (int val, unsigned char* str, unsigned char pointPosition)
-{
-    unsigned char i, l, buffer[] = {0, 0, 0, 0, 0, 0};
-    bool minus = false;
-
-    // No calculation is required for zero value
-    if (val == 0) {
-        ( (unsigned char*) str) [0] = '0';
-        ( (unsigned char*) str) [1] = 0;
-        return;
-    }
-
-    // Correction for processing of negative value
-    if (val < 0) {
-        minus = true;
-        val = -val;
-    }
-
-    // Forming the reverse string
-    for (i = 0; val != 0; i++) {
-        buffer[i] = '0' + (val % 10);
-
-        if (i == pointPosition) {
-            i++;
-            buffer[i] = '.';
-        }
-
-        val /= 10;
-    }
-
-    // Add leading '0' in case of ".x" result
-    if (buffer[i - 1] == '.') {
-        buffer[i] = '0';
-        i++;
-    }
-
-    // Add '-' sign for negative values
-    if (minus) {
-        buffer[i] = '-';
-        i++;
-    }
-
-    // Reversing to get the result string
-    for (l = i; i > 0; i--) {
-        ( (unsigned char*) str) [l - i] = buffer[i - 1];
-    }
-
-    // Put null at the end of string
-    ( (unsigned char*) str) [l] = 0;
-}

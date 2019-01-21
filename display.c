@@ -373,3 +373,92 @@ void setDisplayStr (const char *val)
     }
 #endif
 }
+
+/**
+ * @brief Construction of a string representation of the given value.
+ *  To emulate a floating-point value, a decimal point can be inserted
+ *  before a certain digit.
+ *  When the decimal point is not needed, set pointPosition to 6 or more.
+ * @param val
+ *  the value to be processed.
+ * @param str
+ *  pointer to buffer for constructed string.
+ * @param pointPosition
+ *  put the decimal point in front of specified digit.
+ */
+char *xitoa(int16_t val, char *str, uint8_t len)
+{
+    str += len;
+    *str = 0;
+
+    // Converting the value to the substring
+    for (; len > 0; len--) {
+        *--str = '0' + (val % 10);
+        val /= 10;
+    }
+    return str;
+}
+
+/**
+ * @brief Construction of a string representation of the given value.
+ *  To emulate a floating-point value, a decimal point can be inserted
+ *  before a certain digit.
+ *  When the decimal point is not needed, set pointPosition to 6 or more.
+ * @param val
+ *  the value to be processed.
+ * @param str
+ *  pointer to buffer for constructed string.
+ * @param pointPosition
+ *  put the decimal point in front of specified digit.
+ */
+void itofpa (int val, char *str, uint8_t pointPosition)
+{
+    uint8_t i, l;
+    char buffer[6];
+    bool minus = false;
+
+    // No calculation is required for zero value
+    if (val == 0) {
+        str[0] = '0';
+        str[1] = 0;
+        return;
+    }
+
+    // Correction for processing of negative value
+    if (val < 0) {
+        minus = true;
+        val = -val;
+    }
+
+    // Forming the reverse string
+    for (i = 0; val != 0; i++) {
+        buffer[i] = '0' + (val % 10);
+
+        if (i == pointPosition) {
+            i++;
+            buffer[i] = '.';
+        }
+
+        val /= 10;
+    }
+
+    // Add leading '0' in case of ".x" result
+    if (buffer[i - 1] == '.') {
+        buffer[i] = '0';
+        i++;
+    }
+
+    // Add '-' sign for negative values
+    if (minus) {
+        buffer[i] = '-';
+        i++;
+    }
+
+    // Reversing to get the result string
+    for (l = i; i > 0; i--) {
+        str[l - i] = buffer[i - 1];
+    }
+
+    // Put null at the end of string
+    str[l] = 0;
+}

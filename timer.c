@@ -281,13 +281,7 @@ void uptimeToString (char *strBuff, const char *format)
             continue;
         }
 
-        f[j] = 0;
-
-        // Converting the value to the substring
-        for (; j > 0; j--) {
-            f[j - 1] = '0' + (v % 10);
-            v /= 10;
-        }
+        xitoa(v, f, j);
 
         // Append substring at the end of the resulting string
         strcat (strBuff, f);

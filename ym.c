@@ -34,9 +34,9 @@
  */
 int main()
 {
-    static unsigned char* stringBuffer[7];
-    static unsigned char* timerBuffer[5];
-    unsigned char paramMsg[] = {'P', '0', 0};
+    static char stringBuffer[7];
+    static char timerBuffer[5];
+    static char paramMsg[] = {'P', '0', 0};
 
     initMenu();
     initButtons();
@@ -63,9 +63,9 @@ int main()
                 if (isFTimer() ) {
                     // Making blink the dot in between the hours and minutes.
                     if ( (getUptimeTicks() & 0x100) ) {
-                        uptimeToString ( (unsigned char*) stringBuffer, "Ttt");
+                        uptimeToString ( stringBuffer, "Ttt");
                     } else {
-                        uptimeToString ( (unsigned char*) stringBuffer, "T.tt");
+                        uptimeToString ( stringBuffer, "T.tt");
                     }
                 } else {
                     // Show "n.t.r." -> no timer is running
@@ -73,11 +73,11 @@ int main()
                     continue;
                 }
 
-                setDisplayStr ( (char*) stringBuffer);
+                setDisplayStr ( stringBuffer);
             } else {
                 int temp = getTemperature();
-                itofpa (temp, (char*) stringBuffer, 0);
-                setDisplayStr ( (char*) stringBuffer);
+                itofpa (temp, stringBuffer, 0);
+                setDisplayStr ( stringBuffer);
 
                 if (getParamById (PARAM_OVERHEAT_INDICATION) ) {
                     if (temp < getParamById (PARAM_MIN_TEMPERATURE) ) {
@@ -88,14 +88,14 @@ int main()
                 }
             }
         } else if (getMenuDisplay() == MENU_SET_TIMER) {
-            paramToString (PARAM_FERMENTATION_TIME, (char*) stringBuffer);
-            setDisplayStr ( (char*) stringBuffer);
+            paramToString (PARAM_FERMENTATION_TIME, stringBuffer);
+            setDisplayStr ( stringBuffer);
         } else if (getMenuDisplay() == MENU_SELECT_PARAM) {
             paramMsg[1] = '0' + getParamId();
-            setDisplayStr ( (unsigned char*) &paramMsg);
+            setDisplayStr ( paramMsg);
         } else if (getMenuDisplay() == MENU_CHANGE_PARAM) {
-            paramToString (getParamId(), (char*) stringBuffer);
-            setDisplayStr ( (char *) stringBuffer);
+            paramToString (getParamId(), stringBuffer);
+            setDisplayStr ( stringBuffer);
         } else {
             setDisplayStr ("ERR");
             setDisplayOff ( (bool) ( (uint8_t) getUptimeTicks() & 0x80) );
