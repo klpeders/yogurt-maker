@@ -24,9 +24,17 @@
 #include "relay.h"
 #include "timer.h"
 
-#define INTERRUPT_ENABLE    __asm rim __endasm;
-#define INTERRUPT_DISABLE   __asm sim __endasm;
-#define WAIT_FOR_INTERRUPT  __asm wfi __endasm;
+#ifndef INTERRUPT_ENABLE
+#define INTERRUPT_ENABLE()    do {__asm rim __endasm; } while(0)
+#endif
+
+#ifndef INTERRUPT_DISABLE
+#define INTERRUPT_DISABLE()   do {__asm sim __endasm; } while(0)
+#endif
+
+#ifndef WAIT_FOR_INTERRUPT
+#define WAIT_FOR_INTERRUPT()  do {__asm wfi __endasm; } while(0)
+#endif
 
 
 /**
@@ -35,7 +43,6 @@
 int main()
 {
     static char stringBuffer[7];
-    static char timerBuffer[5];
     static char paramMsg[] = {'P', '0', 0};
 
     initMenu();
@@ -46,7 +53,7 @@ int main()
     initRelay();
     initTimer();
 
-    INTERRUPT_ENABLE
+    INTERRUPT_ENABLE();
 
     // Loop
     while (true) {
@@ -101,6 +108,6 @@ int main()
             setDisplayOff ( (bool) ( (uint8_t) getUptimeTicks() & 0x80) );
         }
 
-        WAIT_FOR_INTERRUPT
+        WAIT_FOR_INTERRUPT();
     };
 }

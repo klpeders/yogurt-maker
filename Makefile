@@ -15,17 +15,27 @@ CONFIG := # CONFIG_ENABLE_FULL_UPTIME  CONFIG_USE_RELAY_BUZZ  RIGHT_ALIGN_TEXT
 ## Common variables
 ## CC and CFLAGS can be overriden using an environment variables
 ##
-CC           := sdcc-sdcc
-LD           := sdcc-sdcc
 MKDIR        := mkdir -p
-
 INCLUDE      := -I. -I./include
 BUILD        := ./Build
+
+ifeq ($(GCC),1)
+CC           := gcc
+LD           := gcc
+TARGET       := $(BUILD)/$(ProjectName)
+
+CFLAGS       := $(INCLUDE) -Wall -O2 -D'WAIT_FOR_INTERRUPT()=' -D'INTERRUPT_ENABLE()=' -D'__interrupt(ARGS...)='
+LDFLAGS      :=
+ObjectSuffix := .o
+else
+CC           := sdcc-sdcc
+LD           := sdcc-sdcc
 TARGET       := $(BUILD)/$(ProjectName).ihx
 
 CFLAGS       := -l $(DEVICE) -m$(DEVICE) $(INCLUDE)
 LDFLAGS      := --out-fmt-ihx -m$(DEVICE)
 ObjectSuffix := .rel
+endif
 
 ##
 ## User defined environment variables
@@ -61,6 +71,11 @@ unlock:
 	stm8flash -c stlinkv2 -p $(CHIP) -u
 flash:
 	stm8flash -c stlinkv2 -p $(CHIP)  -w $(TARGET)
+
+size:
+	for i in Build/*.rel; do \
+		echo $$(sed -n 's/^.* CODE size \([^ ]*\).*$$/0x\1/p' < $$i) $${i%.rel}; \
+	done
 
 ##
 ## Clean

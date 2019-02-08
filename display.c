@@ -71,6 +71,17 @@
 
 #define bit(n) (1 << (n))
 
+enum {
+    SEG_B, SEG_F,
+    SEG_C, SEG_G,
+    SEG_A, SEG_D, SEG_E, SEG_P
+};
+
+enum {
+    DIGIT_1 = 0x10,
+    DIGIT_2 = 0x20,
+    DIGIT_3 = 0x01 // Placeholder for 0x10, replaced in refresh
+};
 
 // Global variables
 
@@ -135,17 +146,6 @@ static const uint8_t displaySegment[] = {
     SSD_SEG_A_BIT, SSD_SEG_D_BIT, SSD_SEG_E_BIT, SSD_SEG_P_BIT
 };
 
-enum {
-    SEG_B, SEG_F,
-    SEG_C, SEG_G,
-    SEG_A, SEG_D, SEG_E, SEG_P
-};
-
-enum {
-    DIGIT_1 = 0x10,
-    DIGIT_2 = 0x20,
-    DIGIT_3 = 0x01 // Placeholder for 0x10, replaced in refresh
-};
 
 
 /**
@@ -233,7 +233,7 @@ void refreshDisplay()
  * @param val
  *  value to be set: true - enable test mode, false - disable test mode.
  */
-void setDisplayTestMode (bool val, char* str)
+void setDisplayTestMode (bool val, const char* str)
 {
     if (!testMode && val) {
         if (*str == 0) {
