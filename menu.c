@@ -43,7 +43,7 @@ static unsigned int timer;
 void initMenu()
 {
     timer = 0;
-    menuState = menuDisplay = MENU_ROOT;
+    menuState = menuDisplay = MENU_INIT;
 }
 
 /**
@@ -94,7 +94,19 @@ void feedMenu (uint8_t event)
 {
     bool blink;
 
-    if (menuState == MENU_ROOT) {
+    if (menuState == MENU_INIT) {
+        switch (event) {
+        case MENU_EVENT_CHECK_TIMER:
+            if (timer > MENU_1_SEC_PASSED) {
+                timer = 0;
+                menuState = menuDisplay = MENU_ROOT;
+            }
+
+        default:
+            ;
+        }
+    }
+    else if (menuState == MENU_ROOT) {
 
         buttonEnableLongPress(BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT);
 

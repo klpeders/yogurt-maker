@@ -55,13 +55,17 @@ int main()
 
     INTERRUPT_ENABLE();
 
+    setDisplayTestMode (false, "");
+    setDisplayStr ("rdy");
+
     // Loop
     while (true) {
-        if (getUptimeSeconds() > 0) {
-            setDisplayTestMode (false, "");
-        }
 
         switch ( getMenuDisplay() ) {
+
+        case MENU_INIT:
+            break;
+
         case MENU_ROOT:
             // Alternately show values for temperature and fermentation timer
             // if it is running.

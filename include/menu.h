@@ -22,10 +22,12 @@
 #include <stdbool.h>
 
 /* Menu sections */
-#define MENU_ROOT          0
-#define MENU_SET_TIMER     1
+#define MENU_INIT          0
+#define MENU_ROOT          1
 #define MENU_SELECT_PARAM  2
 #define MENU_CHANGE_PARAM  3
+#define MENU_SET_TIMER     4
+
 /* Menu events */
 #define MENU_EVENT_PUSH_BUTTON1     1
 #define MENU_EVENT_PUSH_BUTTON2     2

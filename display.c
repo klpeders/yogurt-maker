@@ -126,14 +126,17 @@ static const uint8_t font[] = {
     'N', bit(SEG_B) | bit(SEG_F) | bit(SEG_C) | bit(SEG_A) | bit(SEG_E),
     'O', bit(SEG_B) | bit(SEG_F) | bit(SEG_C) | bit(SEG_A) | bit(SEG_D) | bit(SEG_E),
     'P', bit(SEG_B) | bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_E),
-    'R', bit(SEG_G) | bit(SEG_E),
+    'R', bit(SEG_A) | bit(SEG_E) | bit(SEG_F),
+    'S', bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_A) | bit(SEG_D),
     'T', bit(SEG_F) | bit(SEG_G) | bit(SEG_D) | bit(SEG_E),
     'c', bit(SEG_G) | bit(SEG_E) | bit(SEG_D),
+    'd', bit(SEG_B) | bit(SEG_C) | bit(SEG_G) | bit(SEG_D) | bit(SEG_E),
     'h', bit(SEG_F) | bit(SEG_E) | bit(SEG_G) | bit(SEG_C),
     'o', bit(SEG_G) | bit(SEG_C) | bit(SEG_D) | bit(SEG_E),
     'n', bit(SEG_C) | bit(SEG_G) | bit(SEG_E),
     'r', bit(SEG_G) | bit(SEG_E),
     't', bit(SEG_F) | bit(SEG_G) | bit(SEG_D) | bit(SEG_E),
+    'y', bit(SEG_B) | bit(SEG_C) | bit(SEG_F) | bit(SEG_G) | bit(SEG_D),
     0,   0
 };
 
