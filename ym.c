@@ -61,7 +61,8 @@ int main()
             setDisplayTestMode (false, "");
         }
 
-        if (getMenuDisplay() == MENU_ROOT) {
+        switch ( getMenuDisplay() ) {
+        case MENU_ROOT:
             // Alternately show values for temperature and fermentation timer
             // if it is running.
             if (isRelayEnabled() && getUptimeSeconds() & 0x08) {
@@ -94,18 +95,26 @@ int main()
                     }
                 }
             }
-        } else if (getMenuDisplay() == MENU_SET_TIMER) {
-            paramToString (PARAM_FERMENTATION_TIME, stringBuffer);
-            setDisplayStr ( stringBuffer);
-        } else if (getMenuDisplay() == MENU_SELECT_PARAM) {
-            paramMsg[1] = '0' + getParamId();
-            setDisplayStr ( paramMsg);
-        } else if (getMenuDisplay() == MENU_CHANGE_PARAM) {
-            paramToString (getParamId(), stringBuffer);
-            setDisplayStr ( stringBuffer);
-        } else {
-            setDisplayStr ("ERR");
-            setDisplayOff ( (bool) ( (uint8_t) getUptimeTicks() & 0x80) );
+            break;
+
+        case MENU_SET_TIMER:
+             paramToString (PARAM_FERMENTATION_TIME, stringBuffer);
+             setDisplayStr ( stringBuffer);
+             break;
+
+        case MENU_SELECT_PARAM:
+              paramMsg[1] = '0' + getParamId();
+              setDisplayStr ( paramMsg);
+              break;
+
+        case MENU_CHANGE_PARAM:
+              paramToString (getParamId(), stringBuffer);
+              setDisplayStr ( stringBuffer);
+              break;
+
+        default:
+              setDisplayStr ("ERR");
+              setDisplayOff ( (bool) ( (uint8_t) getUptimeTicks() & 0x80) );
         }
 
         WAIT_FOR_INTERRUPT();

@@ -29,7 +29,7 @@
 #define MENU_1_SEC_PASSED   32
 #define MENU_3_SEC_PASSED   MENU_1_SEC_PASSED * 3
 #define MENU_5_SEC_PASSED   MENU_1_SEC_PASSED * 5
-#define MENU_AUTOINC_DELAY  MENU_1_SEC_PASSED / 8
+#define MENU_AUTOINC_DELAY  MENU_1_SEC_PASSED / 4
 
 static uint8_t menuDisplay;
 static uint8_t menuState;
