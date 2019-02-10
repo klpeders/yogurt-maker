@@ -21,15 +21,32 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/* Definition for buttons */
+
+// Port C control input from buttons.
+#define BUTTONS_PORT   PC_IDR
+
+#define BUTTON1_BIT    0x08 // PC.3
+#define BUTTON2_BIT    0x10 // PC.4
+#define BUTTON3_BIT    0x20 // PC.5
+
+
+/* Prototypes */
+
 void initButtons();
-bool isButton1();
-bool isButton2();
-bool isButton3();
+
+uint8_t getButton();
+
 bool getButton1();
 bool getButton2();
 bool getButton3();
-uint8_t getButton();
-uint8_t getButtonDiff();
+
+void buttonRetrigger(uint8_t keys, uint8_t timeout);
+
+void buttonEnableLongPress(uint8_t keys);
+
+void refreshButtons(void);
+
 void EXTI2_handler() __interrupt (5);
 
 #endif

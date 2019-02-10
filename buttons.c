@@ -17,25 +17,30 @@
 
 /**
  * Control functions for buttons.
- * The EXTI2 interrupt (5) is used to get signal on changing buttons state.
+ * The EXTI2 interrupt (5) is used to get buttons push events.
+ * Timer-tick is used to handle anti-bounce, long-press and repeat.
  */
 
+#include <stdint.h>
 #include "stm8s003/gpio.h"
 #include "buttons.h"
 #include "menu.h"
 
-/* Definition for buttons */
-// Port C control input from buttons.
-#define BUTTONS_PORT   PC_IDR
-// PC.3
-#define BUTTON1_BIT    0x08
-// PC.4
-#define BUTTON2_BIT    0x10
-// PC.5
-#define BUTTON3_BIT    0x20
 
-static uint8_t status;
-static uint8_t diff;
+
+
+#define ISBUTTON1(n) ((n) & BUTTON1_BIT)
+#define ISBUTTON2(n) ((n) & BUTTON2_BIT)
+#define ISBUTTON3(n) ((n) & BUTTON3_BIT)
+
+#define BUTTON_T_ANTI_BOUNCE  2 //  2 * 32ms =  64ms
+#define BUTTON_T_LONGPRESS   64 // 64 * 32ms =   2s
+#define BUTTON_T_REPEAT      34 // 16 * 32ms = 512ms
+
+static uint8_t guard_timer, pending_push;
+static uint8_t settings_repeat_keys, settings_repeat_timeout;
+static uint8_t settings_long_press;
+
 
 /**
  * @brief Configure approptiate pins of MCU as digital inputs. Set
@@ -44,11 +49,11 @@ static uint8_t diff;
  */
 void initButtons()
 {
-    PC_CR1 |= BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT;
-    PC_CR2 |= BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT;
-    status = ~ (BUTTONS_PORT & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT) );
-    diff = 0;
-    EXTI_CR1 |= 0x30;   // generate interrupt on falling and rising front.
+//    PC_DDR &= ~(BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT); // Input
+    PC_CR1 |= BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT; // Enable pull-up
+    PC_CR2 |= BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT; // External IRQ enable
+
+    EXTI_CR1 |= 0x20;   // generate interrupt on falling edge
 }
 
 /**
@@ -58,16 +63,7 @@ void initButtons()
  */
 uint8_t getButton()
 {
-    return status;
-}
-
-/**
- * @brief
- * @return
- */
-uint8_t getButtonDiff()
-{
-    return diff;
+    return ~BUTTONS_PORT & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT);
 }
 
 /**
@@ -76,7 +72,7 @@ uint8_t getButtonDiff()
  */
 bool getButton1()
 {
-    return status & BUTTON1_BIT;
+    return getButton() & BUTTON1_BIT;
 }
 
 /**
@@ -85,7 +81,7 @@ bool getButton1()
  */
 bool getButton2()
 {
-    return status & BUTTON2_BIT;
+    return getButton() & BUTTON2_BIT;
 }
 
 /**
@@ -94,83 +90,164 @@ bool getButton2()
  */
 bool getButton3()
 {
-    return status & BUTTON3_BIT;
+    return getButton() & BUTTON3_BIT;
 }
 
-/**
- * @brief
- * @return
- */
-bool isButton1()
-{
-    if (diff & BUTTON1_BIT) {
-        diff &= ~BUTTON1_BIT;
-        return true;
-    }
 
-    return false;
+/**
+ * @brief Resend key press event in 'timeout' ticks (timeout*32ms)
+ *     Automatically handle:
+ *     <press>
+ *       call retrigger(t_repeat)
+ *       <32 ticks(1sec)>
+ *     <press>
+ *       call retrigger(t_repeat)
+ *       <t_repeat ticks>
+ *     <press>
+ *       call retrigger(t_repeat)
+ *       ...
+ * timeout: 1 - 32, for 32ms to 1024ms per repeat
+ */
+void buttonRetrigger(uint8_t keys, uint8_t timeout)
+{
+    settings_repeat_keys = keys;
+    settings_repeat_timeout = BUTTON_T_REPEAT - timeout;
 }
 
-/**
- * @brief
- * @return
- */
-bool isButton2()
-{
-    if (diff & BUTTON2_BIT) {
-        diff &= ~BUTTON2_BIT;
-        return true;
-    }
 
-    return false;
+/**
+ * @brief Request LONGPRESS from specified button.
+ *     A long-press enabled button doesn't send release events
+ *     PUSH event is send on release.
+ *     LONGPRESS event send after T_LONGPRESS ticks.
+ */
+void buttonEnableLongPress(uint8_t keys)
+{
+    settings_long_press = keys;
 }
 
-/**
- * @brief
- * @return
- */
-bool isButton3()
-{
-    if (diff & BUTTON3_BIT) {
-        diff &= ~BUTTON3_BIT;
-        return true;
-    }
-
-    return false;
-}
 
 /**
- * @brief This function is button's interrupt request handler
- * so keep it extremely small and fast.
+ * @brief Helper to send events to the menu state machine
  */
-void EXTI2_handler() __interrupt (5)
+static uint8_t handleButtonEvent(uint8_t event_base, uint8_t buttons)
 {
-    uint8_t event;
-    diff = status ^ ~ (BUTTONS_PORT & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT) );
-    status = ~ (BUTTONS_PORT & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT) );
+    uint8_t event = 0, status = 0;
 
     // Send appropriate event to menu.
-    if (isButton1() ) {
-        if (getButton1() ) {
-            event = MENU_EVENT_PUSH_BUTTON1;
-        } else {
-            event = MENU_EVENT_RELEASE_BUTTON1;
-        }
-    } else if (isButton2() ) {
-        if (getButton2() ) {
-            event = MENU_EVENT_PUSH_BUTTON2;
-        } else {
-            event = MENU_EVENT_RELEASE_BUTTON2;
-        }
-    } else if (isButton3() ) {
-        if (getButton3() ) {
-            event = MENU_EVENT_PUSH_BUTTON3;
-        } else {
-            event = MENU_EVENT_RELEASE_BUTTON3;
-        }
-    } else {
+    if ( (status = ISBUTTON1(buttons)) ) {
+        event = event_base + 0;
+    }
+    else if ( (status = ISBUTTON2(buttons)) ) {
+        event = event_base + 1;
+    }
+    else if ( (status = ISBUTTON3(buttons)) ) {
+        event = event_base + 2;
+    }
+    if (event) {
+        feedMenu (event);
+    }
+    return status;
+}
+
+
+/**
+ * @brief Callback for checking button actions
+ */
+void refreshButtons()
+{
+    uint8_t event;
+    uint8_t status;
+    uint8_t pressed, released;
+
+    if ( guard_timer == 0 )
+        return;
+
+    if ( guard_timer == 1 && (event = pending_push & ~settings_long_press) )  {
+
+        // Filter out PUSH on long_press enabled keys:
+        //   LONGPRESS is send after BUTTON_T_LONGPRESS timeout
+        //   PUSH is send when a long_press enabled key is released
+        //   only keys that emitted LONGPRESS event send release event
+        // Otherwise Send PUSH event to menu
+
+        status = handleButtonEvent(MENU_EVENT_PUSH_BUTTON1, pending_push & ~settings_long_press);
+        pending_push &= ~status;
         return;
     }
 
-    feedMenu (event);
+    // Wait at least ANTI_BOUNCE ticks after last button press
+    if ( guard_timer < BUTTON_T_ANTI_BOUNCE ) {
+        guard_timer++;
+        return;
+    }
+
+
+    // If key have been held for 'LONGPRESS' ticks, send LONGPRESS event.
+    if ( guard_timer == BUTTON_T_LONGPRESS && (event = (pending_push & settings_long_press)) )  {
+
+        // Send LONGPRESS event
+
+        status = handleButtonEvent(MENU_EVENT_LONGPRESS_BUTTON1, event);
+        pending_push &= ~status;
+        return;
+    }
+
+
+    // If REPEAT is enabled send released event is key is still pressed
+
+    pressed = ~PC_CR2 & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT);
+    if ( guard_timer == BUTTON_T_REPEAT && (event = (pressed & settings_repeat_keys)) ) {
+
+        guard_timer = settings_repeat_timeout;
+        settings_repeat_keys = 0;
+
+        // Send PUSH event to menu for keys where retrigger was requested
+
+        status = handleButtonEvent(MENU_EVENT_PUSH_BUTTON1, event);
+    }
+
+    // Increment guard-timer.
+    if (guard_timer != 255) guard_timer++;
+
+
+    // Handle button RELEASE. Send PUSH on release of LONGPRESS enabled button
+
+    released = BUTTONS_PORT & ~PC_CR2 & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT);
+    status = 0;
+    if ( (event = (released & ~pending_push)) ) {
+
+        // Send RELEASE event to menu when key is released.
+
+        status = handleButtonEvent(MENU_EVENT_RELEASE_BUTTON1, event);
+    }
+    else if ( (event = (released & pending_push)) ) {
+
+        // Send PUSH event to menu when long_press key is released.
+
+        status = handleButtonEvent(MENU_EVENT_PUSH_BUTTON1, event);
+        pending_push &= ~status;
+    }
+
+    PC_CR2 |= status;
+
+    if ((~PC_CR2 & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT)) == 0) {
+        guard_timer = 0;
+    }
 }
+
+
+/**
+ * @brief This function is button's interrupt request handler
+ *
+ */
+void EXTI2_handler() __interrupt (5)
+{
+    uint8_t buttons = ~BUTTONS_PORT & (BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT);
+
+    // save new pending button, disable IRQ for active buttons and enable timer
+    pending_push |= PC_CR2 & buttons;
+    PC_CR2 &= ~buttons;
+    guard_timer = 1;
+}
+

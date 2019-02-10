@@ -31,6 +31,7 @@
 #include "params.h"
 #include "menu.h"
 #include "relay.h"
+#include "buttons.h"
 
 #define TICKS_IN_SECOND     500
 #define BITS_FOR_TICKS      9
@@ -341,7 +342,9 @@ void TIM4_UPD_handler() __interrupt (23)
     // Try not to call all refresh functions at once.
     buzzRelay ();
 
-    if ( ( (uint8_t) getUptimeTicks() & 0x0F) == 1) {
+    if ( ( (uint8_t) getUptimeTicks() & 0x0F) == 0) {
+        refreshButtons();
+    } else if ( ( (uint8_t) getUptimeTicks() & 0x0F) == 1) {
         refreshMenu();
     } else if ( ( (uint8_t) getUptimeTicks() & 0xFF) == 2) {
         startADC();
