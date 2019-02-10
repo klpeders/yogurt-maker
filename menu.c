@@ -56,6 +56,21 @@ uint8_t getMenuDisplay()
 }
 
 /**
+ * @brief check for timeout in the state machine.
+ */
+static void checkTimeout()
+{
+    if (timer > MENU_5_SEC_PASSED) {
+        setParamId (0);
+        if (menuState != MENU_ROOT)
+            storeParams();
+        menuState = menuDisplay = MENU_ROOT;
+        setDisplayOff (false);
+        timer = 0;
+    }
+}
+
+/**
  * @brief Updating state of application's menu and displaying info when new
  *  event is received. Possible states of menu and displaying are:
  *  MENU_ROOT
@@ -80,218 +95,140 @@ void feedMenu (uint8_t event)
     bool blink;
 
     if (menuState == MENU_ROOT) {
+
+        buttonEnableLongPress(BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT);
+
         switch (event) {
         case MENU_EVENT_PUSH_BUTTON1:
+            setParamId (PARAM_FERMENTATION_TIME);
+            menuState = menuDisplay = MENU_SET_TIMER;
             timer = 0;
-            menuDisplay = MENU_SET_TIMER;
             break;
 
-        case MENU_EVENT_RELEASE_BUTTON1:
-            if (timer < MENU_5_SEC_PASSED) {
-                menuState = MENU_SET_TIMER;
-            }
+        case MENU_EVENT_LONGPRESS_BUTTON1:
+            setParamId (0);
+            menuState = menuDisplay = MENU_SELECT_PARAM;
+            timer = 0;
+            break;
 
+        case MENU_EVENT_LONGPRESS_BUTTON2:    // Enable/Disable thermostat
+            if ( !isFTimer() ) {
+                if ( isRelayEnabled() ) {
+                    enableRelay (false);
+                }
+                else {
+                    enableRelay (true);
+                }
+            }
+            timer = 0;
+            break;
+
+        case MENU_EVENT_LONGPRESS_BUTTON3: // Start/Stop fermentation timer
+            if (isFTimer() ) {
+                stopFTimer();
+                enableRelay (false);
+            }
+            else {
+                startFTimer();
+                enableRelay (true);
+            }
             timer = 0;
             break;
 
         case MENU_EVENT_CHECK_TIMER:
-            if (timer > MENU_3_SEC_PASSED) {
-                timer = 0;
-
-                if (getButton1() ) {
-                    setParamId (0);
-                    menuState = menuDisplay = MENU_SELECT_PARAM;
-                } else {
-                    if (getButton2() ) {    // Enable/Disable thermostat
-                        if (isRelayEnabled() && !isFTimer() ) {
-                            enableRelay (false);
-                        } else {
-                            enableRelay (true);
-                        }
-                    } else if (getButton3() ) { // Start/Stop fermentation timer
-                        if (isFTimer() ) {
-                            stopFTimer();
-                            enableRelay (false);
-                        } else {
-                            startFTimer();
-                            enableRelay (true);
-                        }
-                    }
-                }
-
-            }
-
-            break;
+            checkTimeout ();
 
         default:
-            if (timer > MENU_5_SEC_PASSED) {
-                timer = 0;
-                menuState = menuDisplay = MENU_ROOT;
-            }
-
             break;
         }
     } else if (menuState == MENU_SELECT_PARAM) {
+
+        buttonEnableLongPress(0);
+
         switch (event) {
         case MENU_EVENT_PUSH_BUTTON1:
             menuState = menuDisplay = MENU_CHANGE_PARAM;
-
-        case MENU_EVENT_RELEASE_BUTTON1:
             timer = 0;
             break;
 
         case MENU_EVENT_PUSH_BUTTON2:
             incParamId();
-
-        case MENU_EVENT_RELEASE_BUTTON2:
+            buttonRetrigger(BUTTON2_BIT, MENU_AUTOINC_DELAY);
             timer = 0;
             break;
 
         case MENU_EVENT_PUSH_BUTTON3:
             decParamId();
-
-        case MENU_EVENT_RELEASE_BUTTON3:
+            buttonRetrigger(BUTTON3_BIT, MENU_AUTOINC_DELAY);
             timer = 0;
             break;
 
         case MENU_EVENT_CHECK_TIMER:
-            if (timer > MENU_1_SEC_PASSED + MENU_AUTOINC_DELAY) {
-                if (getButton2() ) {
-                    incParamId();
-                    timer = MENU_1_SEC_PASSED;
-                } else if (getButton3() ) {
-                    decParamId();
-                    timer = MENU_1_SEC_PASSED;
-                }
-            }
-
-            if (timer > MENU_5_SEC_PASSED) {
-                timer = 0;
-                setParamId (0);
-                storeParams();
-                menuState = menuDisplay = MENU_ROOT;
-            }
-
-            break;
+            checkTimeout ();
 
         default:
             break;
         }
     } else if (menuState == MENU_CHANGE_PARAM) {
+
+        buttonEnableLongPress(0);
+
         switch (event) {
         case MENU_EVENT_PUSH_BUTTON1:
             menuState = menuDisplay = MENU_SELECT_PARAM;
-
-        case MENU_EVENT_RELEASE_BUTTON1:
             timer = 0;
             break;
 
         case MENU_EVENT_PUSH_BUTTON2:
             incParam();
-
-        case MENU_EVENT_RELEASE_BUTTON2:
+            buttonRetrigger(BUTTON2_BIT, MENU_AUTOINC_DELAY);
             timer = 0;
             break;
 
         case MENU_EVENT_PUSH_BUTTON3:
             decParam();
-
-        case MENU_EVENT_RELEASE_BUTTON3:
+            buttonRetrigger(BUTTON3_BIT, MENU_AUTOINC_DELAY);
             timer = 0;
             break;
 
         case MENU_EVENT_CHECK_TIMER:
-            if (timer > MENU_1_SEC_PASSED + MENU_AUTOINC_DELAY) {
-                if (getButton2() ) {
-                    incParam();
-                    timer = MENU_1_SEC_PASSED;
-                } else if (getButton3() ) {
-                    decParam();
-                    timer = MENU_1_SEC_PASSED;
-                }
-            }
-
-            if (timer > MENU_5_SEC_PASSED) {
-                timer = 0;
-                storeParams();
-                menuState = menuDisplay = MENU_ROOT;
-            }
-
-            break;
+            checkTimeout();
 
         default:
             break;
         }
     } else if (menuState == MENU_SET_TIMER) {
+
+        buttonEnableLongPress(0);
+
         switch (event) {
         case MENU_EVENT_PUSH_BUTTON1:
-            timer = 0;
-            menuDisplay = MENU_ROOT;
+            menuState = menuDisplay = MENU_ROOT;
+            storeParams();
             setDisplayOff (false);
-            break;
-
-        case MENU_EVENT_RELEASE_BUTTON1:
-            if (timer < MENU_5_SEC_PASSED) {
-                storeParams();
-                menuState = MENU_ROOT;
-                setDisplayOff (false);
-            }
-
             timer = 0;
             break;
 
         case MENU_EVENT_PUSH_BUTTON2:
-            setParamId (PARAM_FERMENTATION_TIME);
             incParam();
-
-        case MENU_EVENT_RELEASE_BUTTON2:
+            buttonRetrigger(BUTTON2_BIT, MENU_AUTOINC_DELAY);
             timer = 0;
             break;
 
         case MENU_EVENT_PUSH_BUTTON3:
-            setParamId (PARAM_FERMENTATION_TIME);
             decParam();
-
-        case MENU_EVENT_RELEASE_BUTTON3:
+            buttonRetrigger(BUTTON3_BIT, MENU_AUTOINC_DELAY);
             timer = 0;
             break;
 
         case MENU_EVENT_CHECK_TIMER:
-            if (getButton2() || getButton3() ) {
+            if ( getButton2() || getButton3() ) {
                 blink = false;
             } else {
                 blink = (bool) ( (uint8_t) getUptimeTicks() & 0x80);
             }
-
-            if (timer > MENU_1_SEC_PASSED + MENU_AUTOINC_DELAY) {
-                setParamId (PARAM_FERMENTATION_TIME);
-
-                if (getButton2() ) {
-                    incParam();
-                    timer = MENU_1_SEC_PASSED;
-                } else if (getButton3() ) {
-                    decParam();
-                    timer = MENU_1_SEC_PASSED;
-                }
-            }
-
             setDisplayOff (blink);
-
-            if (timer > MENU_5_SEC_PASSED) {
-                timer = 0;
-
-                if (getButton1() ) {
-                    menuState = menuDisplay = MENU_SELECT_PARAM;
-                    setDisplayOff (false);
-                    break;
-                }
-
-                storeParams();
-                menuState = menuDisplay = MENU_ROOT;
-                setDisplayOff (false);
-            }
-
-            break;
+            checkTimeout();
 
         default:
             break;
