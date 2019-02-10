@@ -93,14 +93,13 @@ void storeParams(void)
  * @brief Check values in the EEPROM to be correct then load them into
  * parameters' cache.
  */
-void initParamsEEPROM()
+void initParamsEEPROM(bool restore)
 {
     uint8_t i;
 
     ee_loadParams (paramCache);
 
-    if (paramCache[MagicId] != MAGIC
-        || getButton2() && getButton3() ) {
+    if (paramCache[MagicId] != MAGIC || restore) {
 
         // Restore parameters to default values
         for (i = 0; i < SZ_PARAMETER; i++) {

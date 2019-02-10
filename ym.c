@@ -44,10 +44,11 @@ int main()
 {
     static char stringBuffer[7];
     static char paramMsg[] = {'P', '0', 0};
+    bool reset_once = true;
 
     initMenu();
     initButtons();
-    initParamsEEPROM();
+    initParamsEEPROM(false);
     initDisplay();
     initADC();
     initRelay();
@@ -64,6 +65,11 @@ int main()
         switch ( getMenuDisplay() ) {
 
         case MENU_INIT:
+            if (getButton2() && getButton3() && reset_once) {
+                initParamsEEPROM(true);
+                setDisplayStr ("RST");
+                reset_once = false;
+            }
             break;
 
         case MENU_ROOT:

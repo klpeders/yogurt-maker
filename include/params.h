@@ -38,7 +38,7 @@ void decParam();
 void incParamId();
 void decParamId();
 void storeParams();
-void initParamsEEPROM();
+void initParamsEEPROM(bool restore);
 uint8_t getParamId();
 int getParamById (uint8_t);
 void setParam (int);
