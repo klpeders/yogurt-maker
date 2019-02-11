@@ -21,29 +21,43 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* Definition for parameter identifiers */
-#define PARAM_RELAY_MODE                0
-#define PARAM_RELAY_HYSTERESIS          1
-#define PARAM_MAX_TEMPERATURE           2
-#define PARAM_MIN_TEMPERATURE           3
-#define PARAM_TEMPERATURE_CORRECTION    4
-#define PARAM_RELAY_DELAY               5
-#define PARAM_OVERHEAT_INDICATION       6
-#define PARAM_THRESHOLD                 7
-#define PARAM_FERMENTATION_TIME         9
 
-int getParam();
-void incParam();
-void decParam();
+#define PARAMETERS(PARAM)                                                           \
+    /*     PARAMETER NAME                MIN  MAX  DEFA STEP  FORMAT CODE        */ \
+    PARAM(PARAM_RELAY_MODE,                0,   1,    0,   1, DISPLAY_STR_NC_NO  ), \
+    PARAM(PARAM_RELAY_HYSTERESIS,          1, 150,   20,   1, DISPLAY_NUM_FRACT_1), \
+    PARAM(PARAM_MAX_TEMPERATURE,         300, 700,  500,  10, DISPLAY_NUM_FRACT_1), \
+    PARAM(PARAM_MIN_TEMPERATURE,         100, 450,  200,  10, DISPLAY_NUM_FRACT_1), \
+    PARAM(PARAM_TEMPERATURE_CORRECTION,  -70,  70,    0,   1, DISPLAY_NUM_FRACT_1), \
+    PARAM(PARAM_RELAY_DELAY,               0,  10,    0,   1, DISPLAY_NUM_INT    ), \
+    PARAM(PARAM_OVERHEAT_INDICATION,       0,   1,    0,   1, DISPLAY_STR_OFF_ON ), \
+    PARAM(PARAM_THRESHOLD,               300, 550,  440,   5, DISPLAY_NUM_FRACT_1), \
+    /* Parameters from magic_id and up is not available in parameter selection:  */ \
+    PARAM(PARAM_MAGIC_ID,                  0,   0,MAGVER,  0, DISPLAY_STR_NONE   ), \
+    PARAM(PARAM_FERMENTATION_TIME,         1,  15,    8,   1, DISPLAY_NUM_INT    ), \
+
+/* Parameter version magic number, increment when making changes */
+#define PARAM_MAGIC_VERSION          0x4E48
+
+/* enumerate the parameters */
+enum {
+#define PARAM_COUNT(name, ARGS...) name
+    PARAMETERS(PARAM_COUNT)
+};
+
+void initParamsEEPROM(bool restore);
+void storeParams();
+
+void setParamId (uint8_t);
+uint8_t getParamId();
 void incParamId();
 void decParamId();
-void storeParams();
-void initParamsEEPROM(bool restore);
-uint8_t getParamId();
+
 int getParamById (uint8_t);
-void setParam (int);
-void setParamId (uint8_t);
 void setParamById (uint8_t, int);
+void incParam();
+void decParam();
+
 void paramToString (uint8_t, char*);
 
 #endif

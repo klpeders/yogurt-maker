@@ -40,46 +40,45 @@
 #include "display.h"
 #include "persist.h"
 
-#define N_PARAMETERS   7 // Number of P0 .. Pn parameters
-
 #define MAGIC          0x4E48
-#define MagicId        (N_PARAMETERS + 1)
-
-static uint8_t paramId;
-static int paramCache[SZ_PARAMETER];
 
 /* Parameter Formattings */
 #define DISPLAY_NUM            0
 #define DISPLAY_NUM_FRACT_1    0    /* 12.3 */
 #define DISPLAY_NUM_FRACT_2    1    /* 1.23 */
 #define DISPLAY_NUM_INT        6    /* 123  */
-#define DISPLAY_STR_NC_NO    -(0+1) /* if false: "NC" else "NO" */
+#define DISPLAY_STR_NC_NO    -(1)   /* if false: "NC" else "NO" */
 #define DISPLAY_STR_OFF_ON   -(7+1) /* if false: "OFF" else "ON" */
 #define DISPLAY_STR_NONE     -(14+1)/* "---" */
 
+/* Constant strings for the on/off switches */
 static const char displayString[] =
     " NC| NO"  //  0
     "OFF| ON"  //  7
     "---|---"  //  7
 ;              // +7
 
-static const int paramMin[] =     {0,   1,  300,  100, -70,  0, 0, 300,     0,  1};
-static const int paramMax[] =     {1, 150,  700,  450,  70, 10, 1, 550,     0, 15};
-static const int paramDefault[] = {0,  20,  500,  200,   0,  0, 0, 440, MAGIC,  8};
-static const uint8_t paramInc[] = {1,   1,   10,   10,   1,  1, 1,   5,     0,  1};
-static const int8_t paramDisplay[] = {
-    [PARAM_RELAY_MODE]             = DISPLAY_STR_NC_NO,
-    [PARAM_RELAY_HYSTERESIS]       = DISPLAY_NUM_FRACT_1,
-    [PARAM_MAX_TEMPERATURE]        = DISPLAY_NUM_FRACT_1,
-    [PARAM_MIN_TEMPERATURE]        = DISPLAY_NUM_FRACT_1,
-    [PARAM_TEMPERATURE_CORRECTION] = DISPLAY_NUM_FRACT_1,
-    [PARAM_RELAY_DELAY]            = DISPLAY_NUM_INT,
-    [PARAM_OVERHEAT_INDICATION]    = DISPLAY_STR_OFF_ON,
-    [PARAM_THRESHOLD]              = DISPLAY_NUM_FRACT_1,
-    [MagicId]                      = DISPLAY_STR_NONE,
-    [PARAM_FERMENTATION_TIME]      = DISPLAY_NUM_INT
+/* Parameter configuration and format */
+#define PARAM_FORMAT(name, _min, _max, _def, _step, _format) \
+    [name] = { .min = _min, .max = _max, .def = _def, .step = _step, .format = _format }
+
+struct parameterConf {
+    int     min, max;
+    int     def;
+    uint8_t step;
+    int8_t  format;
 };
 
+#define N_PARAMETERS   (sizeof(parameters)/sizeof(parameters[0]))
+#define LAST_PARAMETER PARAM_MAGIC_ID
+#define MAGVER         (PARAM_MAGIC_VERSION+N_PARAMETERS)
+
+static const struct parameterConf parameters[] = {
+    PARAMETERS(PARAM_FORMAT)
+};
+
+static uint8_t paramId;
+static int paramCache[N_PARAMETERS];
 
 /**
  * @brief Stores updated parameters in paramCache to EEPROM.
@@ -99,11 +98,11 @@ void initParamsEEPROM(bool restore)
 
     ee_loadParams (paramCache);
 
-    if (paramCache[MagicId] != MAGIC || restore) {
+    if (paramCache[PARAM_MAGIC_ID] != MAGIC || restore) {
 
         // Restore parameters to default values
-        for (i = 0; i < SZ_PARAMETER; i++) {
-            paramCache[i] = paramDefault[i];
+        for (i = 0; i < N_PARAMETERS; i++) {
+            paramCache[i] = parameters[i].def;
         }
 
         storeParams();
@@ -119,7 +118,7 @@ void initParamsEEPROM(bool restore)
  */
 int getParamById (uint8_t id)
 {
-    if (id < SZ_PARAMETER) {
+    if (id < N_PARAMETERS) {
         return paramCache[id];
     }
 
@@ -139,36 +138,18 @@ void setParamById (uint8_t id, int val)
 }
 
 /**
- * @brief
- * @return
- */
-int getParam()
-{
-    return paramCache[paramId];
-}
-
-/**
- * @brief
- * @param val
- */
-void setParam (int val)
-{
-    paramCache[paramId] = val;
-}
-
-/**
  * @brief Incrementing the value of the currently selected parameter.
  */
 void incParam()
 {
     uint8_t i = paramId;
-    int v = paramCache[i] + paramInc[i];
+    int v = paramCache[i] + parameters[i].step;
 
     /* Check if id is a switch style parameter */
-    if (paramDisplay[i] < 0) {
+    if (parameters[i].format < 0) {
         paramCache[i] ^= 0x0001;
     }
-    else if (v <= paramMax[i]) {
+    else if (v <= parameters[i].max) {
         paramCache[i] = v;
     }
 }
@@ -179,13 +160,13 @@ void incParam()
 void decParam()
 {
     uint8_t i = paramId;
-    int v = paramCache[i] - paramInc[i];
+    int v = paramCache[i] - parameters[i].step;
 
     /* Check if id is a switch style parameter */
-    if (paramDisplay[i] < 0) {
+    if (parameters[i].format < 0) {
         paramCache[i] ^= 0x0001;
     }
-    else if (v >= paramMin[i]) {
+    else if (v >= parameters[i].min) {
         paramCache[i] = v;
     }
 }
@@ -205,7 +186,7 @@ uint8_t getParamId()
  */
 void setParamId (uint8_t val)
 {
-    if (val < SZ_PARAMETER) {
+    if (val < N_PARAMETERS) {
         paramId = val;
     }
 }
@@ -215,9 +196,7 @@ void setParamId (uint8_t val)
  */
 void incParamId()
 {
-    if (paramId < N_PARAMETERS) {
-        paramId++;
-    } else {
+    if (++paramId >= LAST_PARAMETER) {
         paramId = 0;
     }
 }
@@ -227,11 +206,10 @@ void incParamId()
  */
 void decParamId()
 {
-    if (paramId > 0) {
-        paramId--;
-    } else {
-        paramId = N_PARAMETERS;
+    if (paramId == 0) {
+        paramId = LAST_PARAMETER;
     }
+    paramId--;
 }
 
 /**
@@ -246,16 +224,17 @@ void paramToString (uint8_t id, char *strBuff)
     int value;
     int8_t  format;
 
-    if (id >= SZ_PARAMETER)
-        id = MagicId;
+    if (id >= N_PARAMETERS)
+        id = PARAM_MAGIC_ID; // Dummy formatting
 
     value = paramCache[id];
-    format = paramDisplay[id];
+    format = parameters[id].format;
 
     if (format >= DISPLAY_NUM) {
         itofpa (value, strBuff, format);
     }
     else {
+        /* extract the switch name from string */
         format = (value & 1)*4 - format - 1;
         strBuff[0] = displayString[format];
         strBuff[1] = displayString[format+1];
