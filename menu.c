@@ -31,7 +31,6 @@
 #define MENU_5_SEC_PASSED   MENU_1_SEC_PASSED * 5
 #define MENU_AUTOINC_DELAY  MENU_1_SEC_PASSED / 4
 
-static uint8_t menuDisplay;
 static uint8_t menuState;
 /* Timer counter of menu. Being incremented on every call of refreshMenu() function.
  * Used to handle menu timeouts and handling of actions on holding a button. */
@@ -43,7 +42,7 @@ static unsigned int timer;
 void initMenu()
 {
     timer = 0;
-    menuState = menuDisplay = MENU_INIT;
+    menuState = MENU_INIT;
 }
 
 /**
@@ -52,7 +51,7 @@ void initMenu()
  */
 uint8_t getMenuDisplay()
 {
-    return menuDisplay;
+    return menuState;
 }
 
 /**
@@ -64,7 +63,7 @@ static void checkTimeout()
         setParamId (0);
         if (menuState != MENU_ROOT)
             storeParams();
-        menuState = menuDisplay = MENU_ROOT;
+        menuState = MENU_ROOT;
         setDisplayOff (false);
         timer = 0;
     }
@@ -99,7 +98,7 @@ void feedMenu (uint8_t event)
         case MENU_EVENT_CHECK_TIMER:
             if (timer > MENU_1_SEC_PASSED) {
                 timer = 0;
-                menuState = menuDisplay = MENU_ROOT;
+                menuState = MENU_ROOT;
             }
 
         default:
@@ -113,13 +112,13 @@ void feedMenu (uint8_t event)
         switch (event) {
         case MENU_EVENT_PUSH_BUTTON1:
             setParamId (PARAM_FERMENTATION_TIME);
-            menuState = menuDisplay = MENU_SET_TIMER;
+            menuState = MENU_SET_TIMER;
             timer = 0;
             break;
 
         case MENU_EVENT_LONGPRESS_BUTTON1:
             setParamId (0);
-            menuState = menuDisplay = MENU_SELECT_PARAM;
+            menuState = MENU_SELECT_PARAM;
             timer = 0;
             break;
 
@@ -159,7 +158,7 @@ void feedMenu (uint8_t event)
 
         switch (event) {
         case MENU_EVENT_PUSH_BUTTON1:
-            menuState = menuDisplay = MENU_CHANGE_PARAM;
+            menuState = MENU_CHANGE_PARAM;
             timer = 0;
             break;
 
@@ -187,7 +186,7 @@ void feedMenu (uint8_t event)
 
         switch (event) {
         case MENU_EVENT_PUSH_BUTTON1:
-            menuState = menuDisplay = MENU_SELECT_PARAM;
+            menuState = MENU_SELECT_PARAM;
             timer = 0;
             break;
 
@@ -215,7 +214,7 @@ void feedMenu (uint8_t event)
 
         switch (event) {
         case MENU_EVENT_PUSH_BUTTON1:
-            menuState = menuDisplay = MENU_ROOT;
+            menuState = MENU_ROOT;
             storeParams();
             setDisplayOff (false);
             timer = 0;
