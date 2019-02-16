@@ -25,37 +25,101 @@
 #include "adc.h"
 #include "params.h"
 
-// Averaging bits
-#define ADC_AVERAGING_BITS      4
-#define ADC_RAW_TABLE_SIZE      sizeof rawAdc / sizeof rawAdc[0]
-// Base temperature in tenth of degrees of Celsius.
-#define ADC_RAW_TABLE_BASE_TEMP -520
+// Filter timeconstant. TIMECONSTANT = log2(1/tc) in
+//     z' = (1-tc)*z + tc*s  =  z + tc(s-z)
+#define ADC_FILTER_TIMECONSTANT      4
+
+/* The lookup table contains raw ADC and temperature values
+ * between 125C and -25C
+ * B = 3125, T0=25C, Rntc=10K, Rs=20K
+ */
+#define RAWTEMP_PWLSEGGROUPS \
+    PWLGROUP(   0,  0,  142,  0, 15, 125.038),\
+    PWLGROUP( 142,  0,  192,  6,  5, 125.038),\
+    PWLGROUP( 334,  6,  320,  5,  6, 83.864),\
+    PWLGROUP( 654, 11,  896,  7,  7, 55.312),\
+    PWLGROUP(1550, 18, 2048,  8,  8, 19.492),\
+    PWLGROUP(3598, 26,  498,  0, 15, -35.580),\
+    /* END */
+#define RAWTEMP_PWLSEGS \
+    PWLSEGM(142, 125.038),	/*   0: 32, (12.7 bits) */\
+    PWLSEGM(174, 114.596),	/*   1: 32, (12.4 bits) */\
+    PWLSEGM(206, 106.263),	/*   2: 32, (12.1 bits) */\
+    PWLSEGM(238, 99.358),	/*   3: 32, (11.9 bits) */\
+    PWLSEGM(270, 93.481),	/*   4: 32, (11.7 bits) */\
+    PWLSEGM(302, 88.374),	/*   5: 32, (11.5 bits) */\
+    PWLSEGM(334, 83.864),	/*   6: 64, (13.3 bits) */\
+    PWLSEGM(398, 76.183),	/*   7: 64, (13.0 bits) */\
+    PWLSEGM(462, 69.797),	/*   8: 64, (12.8 bits) */\
+    PWLSEGM(526, 64.334),	/*   9: 64, (12.6 bits) */\
+    PWLSEGM(590, 59.558),	/*  10: 64, (12.4 bits) */\
+    PWLSEGM(654, 55.312),	/*  11: 128, (14.2 bits) */\
+    PWLSEGM(782, 47.999),	/*  12: 128, (14.0 bits) */\
+    PWLSEGM(910, 41.817),	/*  13: 128, (13.8 bits) */\
+    PWLSEGM(1038, 36.430),	/*  14: 128, (13.6 bits) */\
+    PWLSEGM(1166, 31.628),	/*  15: 128, (13.4 bits) */\
+    PWLSEGM(1294, 27.267),	/*  16: 128, (13.3 bits) */\
+    PWLSEGM(1422, 23.246),	/*  17: 128, (13.2 bits) */\
+    PWLSEGM(1550, 19.492),	/*  18: 256, (15.1 bits) */\
+    PWLSEGM(1806, 12.566),	/*  19: 256, (15.0 bits) */\
+    PWLSEGM(2062, 6.152),	/*  20: 256, (14.9 bits) */\
+    PWLSEGM(2318, 0.009),	/*  21: 256, (14.9 bits) */\
+    PWLSEGM(2574, -6.068),	/*  22: 256, (15.0 bits) */\
+    PWLSEGM(2830, -12.291),	/*  23: 256, (15.1 bits) */\
+    PWLSEGM(3086, -18.927),	/*  24: 256, (15.2 bits) */\
+    PWLSEGM(3342, -26.401),	/*  25: 256, (15.5 bits) */\
+    PWLSEGM(3598, -35.580),	/*  26: END */
+#define RAWTEMP_TABLEBITS     12 // Table optimized for 12 bit input
+#define RAWTEMP_SCALE         20 // 1/2*C (centigrade, rounding *2)
+#define RAWTEMP_COUNT_MAX   3598 // Tmax=-35.580
+#define RAWTEMP_COUNT_MIN    142 // Tmin=125.038
+#define RAWTEMP_T_MAX    125.038
+#define RAWTEMP_T_MIN    -35.580
 
 
-/* The lookup table contains raw ADC values for every degree of Celsius
-   from -52C to 112C. */
-const uint16_t rawAdc[] = {
-    974, 971, 967, 964, 960, 956, 953, 948, 944, 940,
-    935, 930, 925, 920, 914, 909, 903, 897, 891, 884,
-    877, 871, 864, 856, 849, 841, 833, 825, 817, 809,
-    800, 791, 782, 773, 764, 754, 745, 735, 725, 715,
-    705, 695, 685, 675, 664, 654, 644, 633, 623, 612,
-    601, 591, 580, 570, 559, 549, 538, 528, 518, 507,
-    497, 487, 477, 467, 457, 448, 438, 429, 419, 410,
-    401, 392, 383, 375, 366, 358, 349, 341, 333, 326,
-    318, 310, 303, 296, 289, 282, 275, 269, 262, 256,
-    250, 244, 238, 232, 226, 221, 215, 210, 205, 200,
-    195, 191, 186, 181, 177, 173, 169, 165, 161, 157,
-    153, 149, 146, 142, 139, 136, 132, 129, 126, 123,
-    120, 117, 115, 112, 109, 107, 104, 102, 100, 97,
-    95, 93, 91, 89, 87, 85, 83, 81, 79, 78,
-    76, 74, 73, 71, 69, 68, 67, 65, 64, 62,
-    61, 60, 58, 57, 56, 55, 54, 53, 52, 51,
-    49, 48, 47, 47, 46
+#define PWLSEGM(adccount,temp) ((int16_t)(RAWTEMP_SCALE*temp))
+#define PWLGROUP(adccount, index, size, entries, logsize, temp) {size, index, logsize}
+
+static const struct {
+    uint16_t size;
+    uint8_t  index;
+    uint8_t  log2_segsize;
+} pwl_seg[] = {
+    RAWTEMP_PWLSEGGROUPS
 };
 
-static uint16_t result;
-static uint32_t averaged;
+static const int16_t pwl_interp[] = {
+    RAWTEMP_PWLSEGS
+};
+
+static uint16_t filtered;
+
+
+static int16_t getTemp(uint16_t adccount)
+{
+    uint8_t offset;
+    uint8_t i = 0, index;
+    int16_t a, b, temperature;
+
+    if (adccount >= RAWTEMP_COUNT_MAX) adccount = RAWTEMP_COUNT_MAX;
+
+    while (adccount >= pwl_seg[i].size) {
+        adccount -= pwl_seg[i].size;
+        i++;
+    }
+    index = pwl_seg[i].index + (adccount >> pwl_seg[i].log2_segsize);
+    offset = adccount & ((1 << pwl_seg[i].log2_segsize) - 1);
+
+    a = pwl_interp[index];
+    b = pwl_interp[index+1];
+    temperature = a - (((uint16_t)(a - b)*offset) >> pwl_seg[i].log2_segsize);
+
+    // Round:
+    temperature = (temperature + 1) >> 1;
+
+    return temperature;
+}
+
 
 /**
  * @brief Initialize ADC's configuration registers.
@@ -66,8 +130,7 @@ void initADC()
     ADC_CSR |= 0x06;    // select AIN6
     ADC_CSR |= 0x20;    // Interrupt enable (EOCIE)
     ADC_CR1 |= 0x01;    // Power up ADC
-    result = 0;
-    averaged = 0;
+    filtered = 0;
 }
 
 /**
@@ -79,22 +142,12 @@ void startADC()
 }
 
 /**
- * @brief Gets raw result of last data conversion.
- * @return raw result.
+ * @brief Gets filtered ADC value
+ * @return Filtered result.
  */
-uint16_t getAdcResult()
+uint16_t getAdcFiltered()
 {
-    return result;
-}
-
-/**
- * @brief Gets averaged over 2^ADC_AVERAGING_BITS times result of data
- *  convertion.
- * @return averaged result.
- */
-uint16_t getAdcAveraged()
-{
-    return (uint16_t) (averaged >> ADC_AVERAGING_BITS);
+    return filtered;
 }
 
 /**
@@ -104,44 +157,35 @@ uint16_t getAdcAveraged()
  */
 int getTemperature()
 {
-    uint16_t val = getAdcAveraged();
-    uint8_t rightBound = ADC_RAW_TABLE_SIZE;
-    uint8_t leftBound = 0;
-
-    // search through the rawAdc lookup table
-    while ( (rightBound - leftBound) > 1) {
-        uint8_t midId = (leftBound + rightBound) >> 1;
-
-        if (val > rawAdc[midId]) {
-            rightBound = midId;
-        } else {
-            leftBound = midId;
-        }
-    }
-
-    // reusing the "val" for storing an intermediate result
-    if (val >= rawAdc[leftBound]) {
-        val = leftBound * 10;
-    } else {
-        val = (rightBound * 10) - ( (val - rawAdc[rightBound]) * 10)
-              / (rawAdc[leftBound] - rawAdc[rightBound]);
-    }
+    // Need 12 bits
+    uint16_t val = getAdcFiltered() >> (16-RAWTEMP_TABLEBITS);
 
     // Final calculation and correction
-    return ADC_RAW_TABLE_BASE_TEMP + val + getParamById (PARAM_TEMPERATURE_CORRECTION);
+    return getTemp(val) + getParamById (PARAM_TEMPERATURE_CORRECTION);
 }
 
 /**
  * @brief This function is ADC's interrupt request handler
- *  so keep it extremely small and fast.
  */
 void ADC1_EOC_handler() __interrupt (22)
 {
-    int16_t x;
-    result = ADC_DRH << 2;
-    result |= ADC_DRL;
+    static bool init = false; // init once
+    uint16_t h = ADC_DRH;
+    uint8_t  l = ADC_DRL;
+
+    // Create 16 bit result
+    uint16_t adc_v = ((h << 2) | l) << 6;
+
     ADC_CSR &= ~0x80;   // reset EOC
 
-    x = result - getAdcAveraged();
-    averaged += x;
+    // init if needed
+    if (!init) filtered = adc_v, init = true;
+
+//  Calculate filter:
+//     z' = (1-tc)*z + tc*s  =  z + tc(s-z)
+//  Using unsigned integer arith
+//     z' = z - tc*z + tc*s
+//  Restricting timeconstant, TC to power of 2, tc' = log2(1/tc)
+//     z' = z - z >> tc' + s >> tc'
+    filtered = filtered - (filtered >> ADC_FILTER_TIMECONSTANT) + (adc_v >> ADC_FILTER_TIMECONSTANT);
 }

@@ -19,13 +19,11 @@
 #define ADC_H
 
 #include <stdint.h>
-#include <stdbool.h>
 
 void initADC();
 void startADC();
 int getTemperature();
-uint16_t getAdcResult();
-uint16_t getAdcAveraged();
+uint16_t getAdcFiltered();
 void ADC1_EOC_handler() __interrupt (22);
 
 #endif
