@@ -42,6 +42,6 @@ void ee_loadParams(ee_persist_t *params);
  * @param val
  * @param index
  */
-static void ee_writeParam (ee_persist_t val, uint8_t index);
+//void ee_writeParam (ee_persist_t val, uint8_t index);
 
 #endif

@@ -33,17 +33,19 @@
     PARAM(PARAM_OVERHEAT_INDICATION,       0,   1,    0,   1, DISPLAY_STR_OFF_ON ), \
     PARAM(PARAM_THRESHOLD,               300, 550,  440,   5, DISPLAY_NUM_FRACT_1), \
     /* Parameters from magic_id and up is not available in parameter selection:  */ \
-    PARAM(PARAM_MAGIC_ID,                  0,   0,MAGVER,  0, DISPLAY_STR_NONE   ), \
+    PARAM(PARAM_MAGIC_ID,                  0,   0, PARAM_MAGIC_VERSION,  0, DISPLAY_STR_NONE   ), \
     PARAM(PARAM_FERMENTATION_TIME,         1,  15,    8,   1, DISPLAY_NUM_INT    ), \
 
-/* Parameter version magic number, increment when making changes */
-#define PARAM_MAGIC_VERSION          0x4E48
 
 /* enumerate the parameters */
 enum {
 #define PARAM_COUNT(name, ARGS...) name
     PARAMETERS(PARAM_COUNT)
+    N_PARAMETERS
 };
+
+/* Parameter version magic number, increment when making changes */
+#define PARAM_MAGIC_VERSION          (0x4E48 + N_PARAMETERS)
 
 void initParamsEEPROM(bool restore);
 void storeParams();

@@ -69,9 +69,10 @@ struct parameterConf {
     int8_t  format;
 };
 
-#define N_PARAMETERS   (sizeof(parameters)/sizeof(parameters[0]))
+// LAST_PARAMETER point to the last parameter that is available as
+// a user Px parameter:
 #define LAST_PARAMETER PARAM_MAGIC_ID
-#define MAGVER         (PARAM_MAGIC_VERSION+N_PARAMETERS)
+
 
 static const struct parameterConf parameters[] = {
     PARAMETERS(PARAM_FORMAT)
