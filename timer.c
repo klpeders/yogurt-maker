@@ -293,13 +293,15 @@ void TIM4_UPD_handler() __interrupt (23)
 
     uptime++;
 
-    // Try not to call all refresh functions at once.
-    if (activeBeep) {
-        buzzRelay ();
+    // Handle beep / display blink
+
+    buzzRelay ();
+    if (activeBeep)
         displayBeep();
-    }
     else
         refreshDisplay();
+
+    // Try not to call all refresh functions at once.
 
     if ( ( (uint8_t) getUptimeTicks() & 0x0F) == 0) {
         refreshButtons();

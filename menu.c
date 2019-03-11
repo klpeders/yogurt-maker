@@ -106,7 +106,6 @@ void feedMenu (uint8_t event)
         }
     }
     else if (menuState == MENU_ROOT) {
-
         buttonEnableLongPress(BUTTON1_BIT | BUTTON2_BIT | BUTTON3_BIT);
 
         switch (event) {
@@ -135,14 +134,9 @@ void feedMenu (uint8_t event)
             break;
 
         case MENU_EVENT_LONGPRESS_BUTTON3: // Start/Stop fermentation timer
-            if (isFTimer() ) {
-                stopFTimer();
-                enableRelay (false);
-            }
-            else {
-                startFTimer();
-                enableRelay (true);
-            }
+            startFTimer();
+            enableRelay (true);
+            menuState = MENU_TIMER_RUNNING;
             timer = 0;
             break;
 
@@ -152,7 +146,35 @@ void feedMenu (uint8_t event)
         default:
             break;
         }
-    } else if (menuState == MENU_SELECT_PARAM) {
+    }
+    else if (menuState == MENU_TIMER_RUNNING) {
+
+        buttonEnableLongPress(0);
+
+        switch (event) {
+        case MENU_EVENT_CHECK_TIMER:
+            if ( !isFTimer() ) {
+                menuState = MENU_TIMER_FINISHED;
+                timer = 0;
+            }
+        default:
+            break;
+        }
+    }
+    else if (menuState == MENU_TIMER_FINISHED) {
+
+        switch (event) {
+        case MENU_EVENT_PUSH_BUTTON1:
+        case MENU_EVENT_PUSH_BUTTON2:
+        case MENU_EVENT_PUSH_BUTTON3:
+            enableBeep(false);
+            menuState = MENU_ROOT;
+            timer = 0;
+       default:
+            break;
+    	}
+    }
+    else if (menuState == MENU_SELECT_PARAM) {
 
         buttonEnableLongPress(0);
 
@@ -214,8 +236,10 @@ void feedMenu (uint8_t event)
 
         switch (event) {
         case MENU_EVENT_PUSH_BUTTON1:
-            menuState = MENU_ROOT;
+            menuState = MENU_TIMER_RUNNING;
             storeParams();
+            startFTimer();
+            enableRelay (true);
             setDisplayOff (false);
             timer = 0;
             break;

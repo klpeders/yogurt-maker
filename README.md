@@ -17,7 +17,8 @@ The 3 keys on the W1209 is as follows.
 
 1. Hold key 2 and key 3 while powering on to restore defaults
 1. Press key 1, then use key 2 and key 3 to change the fermentation time.
-1. Hold key 3 to start the timer. 
+1. Press key 1 again to start the timer.
+1. Or from the main display, hold key 3 to start the timer.
 
 
 ## Details
@@ -26,23 +27,29 @@ The device have 3 states, ROOT, SET TIMER, PARAMETER SELECT, PARAMETER CHANGE
 
 ```
 ROOT -> SET_TIMER, when key 1 pressed
-ROOT -> PARAMETER_SELECT, when key 1 held for 3 secs
-ROOT -> . (start timer), when key 3 held for 3 secs
+ROOT -> PARAMETER_SELECT, when key 1 long-press
+ROOT -> TIMER_RUNNING, when key 3 long-press
 
-SET_TIMER -> . (inc time), when key 2 pressed
-SET_TIMER -> . (dec time), when key 3 pressed
-SET_TIMER -> ROOT, when key 1 pressed
+SET_TIMER -> self (inc time), when key 2 pressed
+SET_TIMER -> self (dec time), when key 3 pressed
+SET_TIMER -> TIMER_RUNNING, when key 1 pressed
 SET_TIMER -> ROOT, when time_out(5 secs)
 
-PARAMETER_SELECT -> .(inc parameter), when key 2 pressed
-PARAMETER_SELECT -> .(dec parameter), when key 3 pressed
+PARAMETER_SELECT -> self (inc parameter), when key 2 pressed
+PARAMETER_SELECT -> self (dec parameter), when key 3 pressed
 PARAMETER_SELECT -> ROOT, when time_out(5 secs)
 PARAMETER_SELECT -> PARAMETER_CHANGE, when key 1 pressed
 
-PARAMETER_CHANGE -> . (inc time), when key 2 pressed
-PARAMETER_CHANGE -> . (dec time), when key 3 pressed
+PARAMETER_CHANGE -> self (inc parameter), when key 2 pressed
+PARAMETER_CHANGE -> self (dec parameter), when key 3 pressed
 PARAMETER_CHANGE -> PARAMETER_SELECT, when key 1 pressed
 PARAMETER_CHANGE -> ROOT, when time_out(5 secs)
+
+TIMER_RUNNING -> self
+TIMER_RUNNING -> TIMER_FINISHED, when FT time-out
+
+TIMER_FINISHED -> self (beep)
+TIMER_FINISHED -> ROOT, when any key pressed
 ```
 
 

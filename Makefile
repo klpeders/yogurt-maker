@@ -25,7 +25,8 @@ CC           := gcc
 LD           := gcc
 TARGET       := $(BUILD)/$(ProjectName)
 
-CFLAGS       := $(INCLUDE) -Wall -O2 -D'WAIT_FOR_INTERRUPT()=' -D'INTERRUPT_ENABLE()=' -D'__interrupt(ARGS...)='
+CFLAGS       := $(INCLUDE) -Wall -O2# -D'WAIT_FOR_INTERRUPT()=' -D'INTERRUPT_ENABLE()=' -D'__interrupt(ARGS...)='
+CONFIG       += 'WAIT_FOR_INTERRUPT()=' 'INTERRUPT_ENABLE()=' '__interrupt(ARGS...)='
 LDFLAGS      :=
 ObjectSuffix := .o
 else
@@ -43,7 +44,8 @@ endif
 ##
 SRCS := ym.c display.c timer.c buttons.c adc.c menu.c params.c relay.c persist.c
 OBJS := $(SRCS:%=$(BUILD)/%$(ObjectSuffix))
-
+DCONFIG :=  $(addprefix -D,$(CONFIG))
+CFLAGS  += $(DCONFIG)
 
 ##
 ## Main Build Targets

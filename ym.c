@@ -37,14 +37,44 @@
 #endif
 
 
+static char stringBuffer[7];
+
+static const char *showTemperature()
+{
+    int temp = getTemperature();
+
+    if (getParamById (PARAM_OVERHEAT_INDICATION) ) {
+        if (temp < getParamById (PARAM_MIN_TEMPERATURE) ) {
+            return "LLL";
+        } else if (temp > getParamById (PARAM_MAX_TEMPERATURE) ) {
+            return "HHH";
+        }
+    }
+
+    itofpa (temp, stringBuffer, 0);
+    return stringBuffer;
+}
+
+static const char *showTime()
+{
+    // Making blink the dot in between the hours and minutes.
+    if ( (getUptimeTicks() & 0x100) ) {
+        uptimeToString ( stringBuffer, "Ttt");
+    } else {
+        uptimeToString ( stringBuffer, "T.tt");
+    }
+
+    return stringBuffer;
+}
+
 /**
  * @brief
  */
 int main()
 {
-    static char stringBuffer[7];
     static char paramMsg[] = {'P', '0', 0};
     bool reset_once = true;
+    const char *p;
 
     initMenu();
     initButtons();
@@ -73,37 +103,44 @@ int main()
             break;
 
         case MENU_ROOT:
+            // Alternately show values for temperature and 'no timer set'
+
+            if (isRelayEnabled() && getUptimeSeconds() & 0x08) {
+                // Show "ntr." -> no timer is running
+                p = "ntr";
+            } else {
+                p = showTemperature();
+            }
+            setDisplayStr (p);
+            break;
+
+        case MENU_TIMER_RUNNING:
             // Alternately show values for temperature and fermentation timer
             // if it is running.
-            if (isRelayEnabled() && getUptimeSeconds() & 0x08) {
-                stringBuffer[0] = 0;
 
-                if (isFTimer() ) {
-                    // Making blink the dot in between the hours and minutes.
-                    if ( (getUptimeTicks() & 0x100) ) {
-                        uptimeToString ( stringBuffer, "Ttt");
-                    } else {
-                        uptimeToString ( stringBuffer, "T.tt");
-                    }
-                } else {
-                    // Show "n.t.r." -> no timer is running
-                    setDisplayStr ("n.t.r.");
-                    continue;
-                }
-
-                setDisplayStr ( stringBuffer);
+            if (getUptimeSeconds() & 0x08) {
+                p = showTime();
             } else {
-                int temp = getTemperature();
-                itofpa (temp, stringBuffer, 0);
-                setDisplayStr ( stringBuffer);
+                p = showTemperature();
+            }
+            setDisplayStr (p);
+            break;
 
-                if (getParamById (PARAM_OVERHEAT_INDICATION) ) {
-                    if (temp < getParamById (PARAM_MIN_TEMPERATURE) ) {
-                        setDisplayStr ("LLL");
-                    } else if (temp > getParamById (PARAM_MAX_TEMPERATURE) ) {
-                        setDisplayStr ("HHH");
-                    }
+        case MENU_TIMER_FINISHED:
+            // Alternately show values for temperature and 'End'
+
+            if ( (getUptimeTicks() & 0x100) ) {
+                enableBeep(true);
+            }
+            else {
+                enableBeep(false);
+                if (getUptimeSeconds() & 0x08) {
+                    p = "End";
                 }
+                else {
+                    p = showTemperature();
+                }
+                setDisplayStr (p);
             }
             break;
 

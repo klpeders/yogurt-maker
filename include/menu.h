@@ -27,6 +27,8 @@
 #define MENU_SELECT_PARAM  2
 #define MENU_CHANGE_PARAM  3
 #define MENU_SET_TIMER     4
+#define MENU_TIMER_RUNNING 5
+#define MENU_TIMER_FINISHED 6
 
 /* Menu events */
 #define MENU_EVENT_PUSH_BUTTON1     1

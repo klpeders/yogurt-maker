@@ -183,7 +183,7 @@ void initDisplay()
 static void enableSegment (bool set)
 {
     uint8_t id = activeSegId;
-    uint8_t seg = displaySegment[activeSegId];
+    uint8_t seg = displaySegment[id];
     volatile uint8_t *rdport;
 
     rdport = (id <= SEG_F)?  &SSD_SEG_BF_PORT:
@@ -199,6 +199,7 @@ static void enableDigits ()
 {
     uint8_t rdport;
     uint8_t digits = display[activeSegId];
+
     rdport = SSD_DIGIT_3_PORT & ~SSD_DIGIT_3_BIT;
     SSD_DIGIT_3_PORT = (digits & DIGIT_3)? rdport | SSD_DIGIT_3_BIT : rdport;
     digits &= ~DIGIT_3;
