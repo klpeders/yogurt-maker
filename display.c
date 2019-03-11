@@ -174,28 +174,37 @@ void initDisplay()
  * @brief
  * Enable the segment with given ID on SSD and remaining of segments are unchanged.
  *
- * @param id
+ * @param id (implicit from global activeSegId)
  * The ID = 0 corresponds to the SEG_A to SEG_P enum
  * Accepted values are: SEG_A to SEG_P
  * @param set
  * Enable the segment if true, else disable
  */
-static void enableSegment (uint8_t id, bool set)
+static void enableSegment (bool set)
 {
-    uint8_t seg = displaySegment[id];
+    uint8_t id = activeSegId;
+    uint8_t seg = displaySegment[activeSegId];
     volatile uint8_t *rdport;
 
-    if (id <= SEG_F)
-        rdport = &SSD_SEG_BF_PORT;
-    else if (id <= SEG_G)
-        rdport = &SSD_SEG_CG_PORT;
-    else
-        rdport = &SSD_SEG_AEDP_PORT;
-
+    rdport = (id <= SEG_F)?  &SSD_SEG_BF_PORT:
+             (id <= SEG_G)?  &SSD_SEG_CG_PORT:
+                             &SSD_SEG_AEDP_PORT;
     if (set)
         *rdport |= seg;
     else
         *rdport &= ~seg;
+}
+
+static void enableDigits ()
+{
+    uint8_t rdport;
+    uint8_t digits = display[activeSegId];
+    rdport = SSD_DIGIT_3_PORT & ~SSD_DIGIT_3_BIT;
+    SSD_DIGIT_3_PORT = (digits & DIGIT_3)? rdport | SSD_DIGIT_3_BIT : rdport;
+    digits &= ~DIGIT_3;
+
+    rdport = SSD_DIGIT_12_PORT & ~(SSD_DIGIT_1_BIT | SSD_DIGIT_2_BIT);
+    SSD_DIGIT_12_PORT = rdport | digits;
 }
 
 /**
@@ -206,27 +215,18 @@ static void enableSegment (uint8_t id, bool set)
  */
 void refreshDisplay()
 {
-    uint8_t rdport, digits;
-
-    enableSegment (activeSegId, false);
+    enableSegment (false);
 
     if (displayOff) {
         return;
     }
 
     activeSegId = (activeSegId + 1) & 0x7;
+    enableDigits();
 
-    digits = display[activeSegId];
+    enableSegment (true);
 
-    rdport = SSD_DIGIT_12_PORT & ~(SSD_DIGIT_1_BIT | SSD_DIGIT_2_BIT);
-    SSD_DIGIT_12_PORT = rdport | (digits & (SSD_DIGIT_1_BIT | SSD_DIGIT_2_BIT));
 
-    rdport = SSD_DIGIT_3_PORT & ~SSD_DIGIT_3_BIT;
-    if (digits & DIGIT_3)
-        rdport |= SSD_DIGIT_3_BIT;
-    SSD_DIGIT_3_PORT = rdport;
-
-    enableSegment (activeSegId, true);
 }
 
 /**
