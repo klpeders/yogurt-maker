@@ -35,4 +35,6 @@ uint8_t getUptimeDays();
 void uptimeToString (char*, const char*);
 void TIM4_UPD_handler() __interrupt (23);
 
+void enableBeep(uint8_t set);
+
 #endif

@@ -58,7 +58,7 @@ static uint32_t uptime;
  */
 static uint16_t fTimer;
 static uint8_t fTimerSeconds;
-
+static bool activeBeep = false;
 
 /**
  * @brief Initialize timer's configuration registers and reset uptime.
@@ -294,7 +294,12 @@ void TIM4_UPD_handler() __interrupt (23)
     uptime++;
 
     // Try not to call all refresh functions at once.
-    buzzRelay ();
+    if (activeBeep) {
+        buzzRelay ();
+        displayBeep();
+    }
+    else
+        refreshDisplay();
 
     if ( ( (uint8_t) getUptimeTicks() & 0x0F) == 0) {
         refreshButtons();
@@ -305,6 +310,10 @@ void TIM4_UPD_handler() __interrupt (23)
     } else if ( ( (uint8_t) getUptimeTicks() & 0xFF) == 3) {
         refreshRelay();
     }
+}
 
-    refreshDisplay();
+void enableBeep(uint8_t set)
+{
+    activeBeep = set;
+    setDisplayTestMode(set, "   ");
 }

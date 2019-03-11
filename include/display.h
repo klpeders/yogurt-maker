@@ -30,4 +30,6 @@ void setDisplayTestMode (bool, const char *str);
 char *xitoa(int16_t val, char *str, uint8_t len);
 void itofpa (int val, char* str, uint8_t pointPosition);
 
+void displayBeep();
+
 #endif

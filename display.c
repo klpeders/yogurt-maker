@@ -225,8 +225,18 @@ void refreshDisplay()
     enableDigits();
 
     enableSegment (true);
+}
 
-
+void displayBeep()
+{
+#ifdef CONFIG_USE_DISPLAY_BUZZ
+    enableSegment (false);
+    activeSegId = SEG_P;
+    display[activeSegId] |= ~DIGIT_1;
+    display[activeSegId] ^= DIGIT_1;
+    enableDigits();
+    enableSegment (true);
+#endif
 }
 
 /**
