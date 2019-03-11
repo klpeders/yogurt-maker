@@ -189,106 +189,60 @@ uint8_t getUptimeDays()
  * @param strBuff
  *  A pointer to a string buffer where the result should be placed.
  * @param format
- *  Day - D | d, Hour - H | h, Minute - M | m, Second - S | s.
- * In place of capital leter the actual value will be shown even if this
- * value is zero. The small leter will be replaced by actual value only
- * if this value is non-zero.
+ *  Day - d, Hour - h, Minute - m, Second -  s, Timer(hours) - T, Timer(min) - t
+ *  A single letter allow numbers from 0-9, doubling the letter, from 00-99.
  *  Due to the limited display size, only the "." character is allowed
  * as a separator.
- * Example: "dd.hH.MM" for 00 days, 10 hours and 02 minutes will produce
+ * Example: "dd.hh.mm" for 00 days, 10 hours and 02 minutes will produce
  * ".10.02" result.
  */
 void uptimeToString (char *strBuff, const char *format)
 {
     uint8_t i, j, v;
-    char f[3];
+    char fc;
 
-    for (i = 0; format[i] != 0; i++) {
-        switch (format[i]) {
+    for (i = 0; (fc = format[i]) != 0; i += j) {
+
+        switch (fc) {
 #ifdef CONFIG_ENABLE_FULL_UPTIME
         case 'd':
-        case 'D':
             v = getUptimeDays();
-            j = 1;
-
-            if (format[i + 1] == 'D') {
-                j++;
-                i++;
-            }
-
             break;
 
         case 'h':
-        case 'H':
             v = getUptimeHours();
-            j = 1;
-
-            if (format[i + 1] == 'H') {
-                j++;
-                i++;
-            }
-
             break;
 
         case 'm':
-        case 'M':
             v = getUptimeMinutes();
-            j = 1;
-
-            if (format[i + 1] == 'M') {
-                j++;
-                i++;
-            }
-
             break;
 
         case 's':
-        case 'S':
             v = getUptimeSeconds();
-            j = 1;
-
-            if (format[i + 1] == 'S') {
-                j++;
-                i++;
-            }
-
             break;
 #endif
         case 't':
             v = getFTimerMinutes();
-            j = 1;
-
-            if (format[i + 1] == 't') {
-                j++;
-                i++;
-            }
-
             break;
 
         case 'T':
             v = getFTimerHours();
-            j = 1;
-
-            if (format[i + 1] == 'T') {
-                j++;
-                i++;
-            }
-
             break;
 
         default:
-            f[0] = format[i];
-            f[1] = 0;
-            strcat (strBuff, f);
+            strBuff[i] = format[i];
+            j = 1;
             continue;
         }
 
-        xitoa(v, f, j);
+        // Check if single or double digit numbers are requested.
+        j = (format[i + 1] == fc)? 2: 1;
 
         // Append substring at the end of the resulting string
-        strcat (strBuff, f);
+        xitoa(v, strBuff+i, j);
     }
-
+    // Terminate the string
+    strBuff[i] = 0;
 }
 
 /**
